@@ -19,6 +19,9 @@
 - Pasta no Drive: `Finanças da Família`; arquivo de dados: `financas.json` dentro dela.
 - Nenhum servidor próprio, nenhum segredo no código. O Client ID do Google vem de `VITE_GOOGLE_CLIENT_ID`.
 - Todo registro de dados carrega `updatedAt` (ms desde epoch), `updatedBy` (`'u1' | 'u2'`) e `deletedAt?` (lápide). Nada é apagado fisicamente.
+- **Tudo o que o casal cadastra pode ser editado e excluído** pela interface: lançamentos, parcelas, recorrências, contas, cartões e categorias (exceto a categoria de sistema "Pagamento de fatura"); perfis podem ser renomeados. Excluir = gravar lápide: o item some de todas as telas e totais, e a exclusão chega ao outro aparelho na sincronização.
+- Toda exclusão pede confirmação e, depois de feita, mostra por 5 s um aviso com o botão **"Desfazer"** (remove a lápide).
+- Excluir uma conta, um cartão ou uma categoria que tenha lançamentos avisa quantos são e oferece: **"Excluir também os N lançamentos"** ou **"Cancelar"**. Para categorias há ainda **"Mover os lançamentos para…"** (outra categoria do mesmo tipo).
 - O app funciona sem internet; sincroniza quando a conexão volta.
 
 ## Pontos de Atenção na Revisão
@@ -175,6 +178,9 @@ export const emptyDoc: () => DataDoc;
   - `class Repo { constructor(dbName?: string) }`
   - `repo.put<T extends Meta>(c: Collection, rec: Omit<T, 'updatedAt' | 'updatedBy'> & { id?: string }, by: ProfileId): Promise<T>` — gera `id` com `crypto.randomUUID()` se faltar, carimba `updatedAt = Date.now()` e `updatedBy`, marca o banco como "sujo".
   - `repo.remove(c: Collection, id: string, by: ProfileId): Promise<void>` — grava lápide.
+  - `repo.restore(c: Collection, id: string, by: ProfileId): Promise<void>` — remove a lápide (usado pelo "Desfazer").
+  - `repo.removeCascade(c: 'accounts' | 'cards' | 'categories', id: string, by: ProfileId, opts?: { moveToCategoryId?: string }): Promise<string[]>` — exclui o item e os lançamentos ligados a ele (`accountId`, `cardId` ou `cardPayment.cardId`, `categoryId`); com `moveToCategoryId`, regrava os lançamentos na outra categoria em vez de excluí-los. Retorna os ids afetados, para o "Desfazer".
+  - `repo.countLinked(c: 'accounts' | 'cards' | 'categories', id: string): Promise<number>` — quantos lançamentos não excluídos usam o item.
   - `repo.list<T>(c: Collection): Promise<T[]>` — sem lápides.
   - `repo.exportDoc(): Promise<DataDoc>` — com lápides.
   - `repo.importDoc(remote: DataDoc): Promise<void>` — grava `mergeDocs(local, remote)`.
@@ -185,6 +191,11 @@ export const emptyDoc: () => DataDoc;
 - [ ] **Passo 1: Testes que falham:**
   - `"put gera id e carimbo"`: `put('accounts', {name:'Nubank', kind:'corrente', initialBalanceCents:0}, 'u1')` → `id` não vazio, `updatedBy:'u1'`, `isDirty()` true.
   - `"remove esconde da lista mas exporta lápide"`.
+  - `"restore traz o item de volta"`: `remove` e depois `restore` → item volta em `list`, sem `deletedAt`.
+  - `"editar mantém o id e atualiza o carimbo"`: `put` de novo com o mesmo `id` e outro valor → um único registro, `updatedAt` maior.
+  - `"removeCascade de conta exclui seus lançamentos"`: conta com 2 lançamentos → 3 ids retornados, `list('transactions')` vazio.
+  - `"removeCascade de categoria com moveTo regrava os lançamentos"`: lançamentos passam a ter o novo `categoryId`, nenhum excluído.
+  - `"countLinked ignora lançamentos já excluídos"`.
   - `"importDoc junta com o local"`: local `t1`, remoto `t2` → `list('transactions')` tem os dois.
   - `"ensureDefaults é idempotente"`: duas chamadas → 2 perfis, 11 categorias.
   - `"device não entra no exportDoc"`.
@@ -319,21 +330,28 @@ export const emptyDoc: () => DataDoc;
 ### Tarefa 9: Lançamentos, contas e categorias
 
 **Arquivos:**
-- Criar: `src/ui/Transactions.tsx`, `src/ui/TransactionForm.tsx`, `src/ui/Accounts.tsx`, `src/ui/Categories.tsx`
+- Criar: `src/ui/Transactions.tsx`, `src/ui/TransactionForm.tsx`, `src/ui/Recurrences.tsx`, `src/ui/Accounts.tsx`, `src/ui/Categories.tsx`, `src/ui/UndoToast.tsx`
 - Teste: `tests/ui/transactions.test.tsx`
 
 **Comportamento:**
 - Lista do mês (setas mês anterior/seguinte), mais recente primeiro, com valor, categoria, perfil e conta/cartão; filtro Todos / perfil 1 / perfil 2.
 - Formulário: tipo (receita/despesa), valor (`parseBRL`), data (hoje por padrão), categoria (filtrada pelo tipo), forma (conta ou cartão), parcelas (só cartão, 1–24), "repetir todo mês" (cria `Recurrence`), observação. O perfil é o do aparelho.
-- Compra no cartão parcelada → `buildInstallments`; editar/excluir uma parcela pergunta "só esta" ou "todas as parcelas".
-- Ao abrir o mês, `dueRecurrences` gera os lançamentos recorrentes pendentes.
-- Contas: criar/editar/excluir, saldo atual (`accountBalanceCents`). Categorias: criar/editar/excluir (exceto `system`), orçamento mensal opcional.
+- Tocar num lançamento abre o mesmo formulário preenchido, com botões **Salvar** e **Excluir**. Qualquer campo pode ser alterado; mudar data ou cartão recalcula `invoiceMonth`.
+- Compra no cartão parcelada → `buildInstallments`; editar/excluir uma parcela pergunta "só esta" ou "todas as parcelas". Mudar valor ou número de parcelas em "todas" exclui as parcelas antigas e gera as novas com o mesmo `groupId`.
+- Ao abrir o mês, `dueRecurrences` gera os lançamentos recorrentes pendentes. Tela "Recorrentes": editar (vale do mês seguinte em diante), encerrar (grava `endMonth` = mês atual) ou excluir (lápide; lançamentos já gerados ficam, a menos que o usuário marque "excluir também os deste mês").
+- Contas: criar/editar/excluir, saldo atual (`accountBalanceCents`). Categorias: criar/editar/excluir (exceto `system`), orçamento mensal opcional. Exclusões com lançamentos ligados seguem as Restrições Globais (`countLinked` + `removeCascade`).
+- Toda exclusão: confirmação → lápide → aviso "Excluído. Desfazer" por 5 s (`repo.restore` dos ids retornados).
 
 - [ ] **Passo 1: Testes que falham:**
   - `"valor inválido bloqueia o salvar"` ("abc" → mensagem "Valor inválido").
   - `"compra 3x no cartão cria 3 lançamentos"`.
   - `"lançamento recebe o perfil do aparelho"`.
+  - `"editar lançamento altera valor e categoria"`: abre, muda 5000 → 7000 e a categoria, salva → lista mostra o novo valor, mesmo id.
+  - `"excluir pede confirmação e Desfazer restaura"`.
   - `"excluir todas as parcelas grava 3 lápides"`.
+  - `"editar todas as parcelas de 3x para 4x"`: 4 parcelas ativas, as 3 antigas com lápide.
+  - `"encerrar recorrência não gera o mês seguinte"`.
+  - `"excluir conta com lançamentos mostra a quantidade"`: diálogo diz "2 lançamentos".
   - `"categoria do sistema não pode ser excluída"`.
 - [ ] **Passo 2–4:** ver falhar, implementar, PASS. **Passo 5: Commit** — `"feat: lançamentos, contas e categorias"`
 
@@ -346,11 +364,12 @@ export const emptyDoc: () => DataDoc;
 - Teste: `tests/ui/cards.test.tsx`
 
 **Comportamento:**
-- Cadastro de cartão: nome, limite, dia de fechamento (1–31), dia de vencimento (1–31).
+- Cadastro de cartão: nome, limite, dia de fechamento (1–31), dia de vencimento (1–31). Editar recalcula o `invoiceMonth` das compras **ainda não pagas**; faturas já pagas não mudam. Excluir segue as Restrições Globais (cascata + Desfazer).
+- Pagamentos de fatura podem ser editados (valor, conta, data) e excluídos como qualquer lançamento.
 - Por cartão: fatura do mês escolhido (`invoiceSummary`) com itens, total, vencimento e situação ("aberta", "fechada", "paga" quando `paidCents >= totalCents`); limite usado e disponível (`limitUsedCents`).
 - "Pagar fatura": escolhe conta e valor (padrão: restante) → lançamento despesa em `cat-pagamento-fatura` com `cardPayment`.
 
-- [ ] **Passo 1: Testes que falham:** `"fatura mostra total e vencimento"`, `"pagar fatura marca como paga"`, `"dia de fechamento 0 ou 32 é recusado"`.
+- [ ] **Passo 1: Testes que falham:** `"fatura mostra total e vencimento"`, `"pagar fatura marca como paga"`, `"dia de fechamento 0 ou 32 é recusado"`, `"mudar dia de fechamento move compras abertas, não as de fatura paga"`, `"excluir pagamento volta a fatura para aberta"`.
 - [ ] **Passo 2–4:** ver falhar, implementar, PASS. **Passo 5: Commit** — `"feat: telas de cartões e faturas"`
 
 ---
