@@ -2,7 +2,10 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { addMonths, monthOf, today } from '../domain/dates'
 
 const monthFmt = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' })
-export const monthLabel = (m: string) => monthFmt.format(new Date(`${m}-15T12:00:00Z`))
+export const monthLabel = (m: string) => {
+  const s = monthFmt.format(new Date(`${m}-15T12:00:00Z`))
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
 export const dateLabel = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`
 export const currentMonth = () => monthOf(today())
 

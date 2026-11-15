@@ -97,7 +97,7 @@ p { margin: 0 0 12px; }
 
 .month { display: flex; align-items: center; gap: 4px; margin-bottom: 16px; }
 .month button { background: none; border: 0; width: 44px; height: 44px; font-size: 22px; cursor: pointer; color: var(--tinta); border-radius: 50%; }
-.month strong { font-size: 17px; min-width: 150px; text-align: center; text-transform: capitalize; }
+.month strong { font-size: 17px; min-width: 150px; text-align: center; }
 
 /* Diálogo */
 .overlay { position: fixed; inset: 0; background: rgba(15, 30, 50, .45); display: grid; place-items: end center; z-index: 20; }
