@@ -1,5 +1,5 @@
 import { Repo } from '../../src/data/db'
-import { emptyDoc, type Account, type Transaction } from '../../src/domain/types'
+import { emptyDoc, type Account, type Profile, type Transaction } from '../../src/domain/types'
 
 let n = 0
 const newRepo = () => new Repo(`test-${++n}-${Math.random()}`)
@@ -50,7 +50,7 @@ test('importDoc junta com o local', async () => {
   const repo = newRepo()
   await repo.put<Transaction>('transactions', { ...txBase, id: 't1', accountId: 'a1' }, 'u1')
   const remote = emptyDoc()
-  remote.records.transactions.t2 = { ...txBase, id: 't2', accountId: 'a1', updatedAt: 5, updatedBy: 'u2' }
+  remote.records.transactions.t2 = { ...txBase, id: 't2', accountId: 'a1', updatedAt: 5, updatedBy: 'u2' } as Transaction
   await repo.importDoc(remote)
   const ids = (await repo.list('transactions')).map(t => t.id).sort()
   expect(ids).toEqual(['t1', 't2'])
@@ -68,7 +68,7 @@ test('padrões criados offline não apagam um nome editado em outro aparelho', a
   const repo = newRepo()
   await repo.ensureDefaults('u1')
   const remote = emptyDoc()
-  remote.records.profiles.u1 = { id: 'u1', name: 'Ana', updatedAt: 5, updatedBy: 'u2' }
+  remote.records.profiles.u1 = { id: 'u1', name: 'Ana', updatedAt: 5, updatedBy: 'u2' } as Profile
   await repo.importDoc(remote)
   const p = await repo.get<{ id: string; name: string } & import('../../src/domain/types').Meta>('profiles', 'u1')
   expect(p?.name).toBe('Ana')

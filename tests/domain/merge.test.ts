@@ -23,7 +23,7 @@ test('vence a alteração mais recente', () => {
     docWith(tx('t1', { updatedAt: 100, amountCents: 500 })),
     docWith(tx('t1', { updatedAt: 200, amountCents: 900 })),
   )
-  expect(r.records.transactions.t1.amountCents).toBe(900)
+  expect((r.records.transactions.t1 as Transaction).amountCents).toBe(900)
 })
 
 test('exclusão mais recente vence edição antiga', () => {

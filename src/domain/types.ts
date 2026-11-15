@@ -64,7 +64,8 @@ export type Collection = 'profiles' | 'accounts' | 'categories' | 'cards' | 'tra
 
 export const COLLECTIONS: Collection[] = ['profiles', 'accounts', 'categories', 'cards', 'transactions', 'recurrences']
 
-export type AnyRecord = Meta & Record<string, unknown>
+/** Qualquer registro sincronizado (os campos extras variam por coleção). */
+export type AnyRecord = Meta
 
 export interface DataDoc {
   schemaVersion: 1
