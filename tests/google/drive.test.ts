@@ -72,3 +72,15 @@ test("nome da pasta com apóstrofo é escapado na busca", async () => {
   await client(f.fn).ensureFolder("D'Ávila")
   expect(decodeURIComponent(f.calls[0].url)).toContain("name='D\\'Ávila'")
 })
+
+test('403 por limite de uso não pede login de novo', async () => {
+  const f = fakeFetch([{ status: 403, body: { error: { errors: [{ reason: 'rateLimitExceeded' }] } } }])
+  const err = await client(f.fn).download('FILE').catch(e => e)
+  expect(err).not.toBeInstanceOf(AuthError)
+  expect(err).toBeInstanceOf(Error)
+})
+
+test('403 de permissão pede login', async () => {
+  const f = fakeFetch([{ status: 403, body: { error: { errors: [{ reason: 'insufficientPermissions' }] } } }])
+  await expect(client(f.fn).download('FILE')).rejects.toBeInstanceOf(AuthError)
+})

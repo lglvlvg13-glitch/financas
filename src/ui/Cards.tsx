@@ -161,11 +161,8 @@ function CardForm({ initial, onClose }: { initial?: Card; onClose: () => void })
   }
 
   const remove = async () => {
-    const ids = await repo.removeCascade('cards', initial!.id, me)
-    undo({ message: 'Cartão excluído.', undo: async () => {
-      await repo.restore('cards', ids[0], me)
-      for (const id of ids.slice(1)) await repo.restore('transactions', id, me)
-    } })
+    const affected = await repo.removeCascade('cards', initial!.id, me)
+    undo({ message: 'Cartão excluído.', undo: () => repo.restoreAll(affected, me) })
     onClose()
   }
 
@@ -197,7 +194,7 @@ function CardForm({ initial, onClose }: { initial?: Card; onClose: () => void })
       {linked !== undefined && (
         <Confirm
           title={`Excluir o cartão ${initial!.name}?`}
-          body={linked > 0 ? <p>Este cartão tem {plural(linked, 'lançamento', 'lançamentos')} (compras e pagamentos). Eles serão excluídos junto.</p> : undefined}
+          body={linked > 0 ? <p>Este cartão tem {plural(linked, 'compra', 'compras')}. Elas serão excluídas junto. Os pagamentos de fatura continuam nas contas.</p> : undefined}
           onCancel={() => setLinked(undefined)}
           actions={[{
             label: linked > 0 ? `Excluir também os ${plural(linked, 'lançamento', 'lançamentos')}` : 'Excluir',

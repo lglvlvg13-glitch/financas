@@ -61,11 +61,8 @@ function AccountForm({ initial, onClose }: { initial?: Account; onClose: () => v
   }
 
   const remove = async () => {
-    const ids = await repo.removeCascade('accounts', initial!.id, me)
-    undo({ message: 'Conta excluída.', undo: async () => {
-      await repo.restore('accounts', ids[0], me)
-      for (const id of ids.slice(1)) await repo.restore('transactions', id, me)
-    } })
+    const affected = await repo.removeCascade('accounts', initial!.id, me)
+    undo({ message: 'Conta excluída.', undo: () => repo.restoreAll(affected, me) })
     onClose()
   }
 

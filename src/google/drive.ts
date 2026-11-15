@@ -26,7 +26,13 @@ export class DriveClient {
     } catch {
       throw new NetworkError()
     }
-    if (res.status === 401 || res.status === 403) throw new AuthError()
+    if (res.status === 401) throw new AuthError()
+    if (res.status === 403) {
+      // 403 também é usado para limite de uso; só pede login quando é falta de permissão.
+      const body = await res.clone().json().catch(() => ({})) as { error?: { errors?: Array<{ reason?: string }> } }
+      const reason = body.error?.errors?.[0]?.reason ?? ''
+      if (/authError|insufficientPermissions|forbidden|appNotAuthorized/i.test(reason) || !reason) throw new AuthError()
+    }
     if (!res.ok) throw new Error(`Drive respondeu ${res.status}`)
     return res
   }

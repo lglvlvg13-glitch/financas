@@ -3,7 +3,8 @@ import { useApp, useList, useProfiles } from './context'
 import { currentMonth, dateLabel, monthLabel, MonthNav, useMonth } from './common'
 import { TransactionForm } from './TransactionForm'
 import { formatBRL } from '../domain/money'
-import { competenceMonth, dueRecurrences } from '../domain/summary'
+import { competenceMonth } from '../domain/summary'
+import { generateRecurrences } from '../data/recurring'
 import type { Account, Card, Category, ProfileId, Recurrence, Transaction } from '../domain/types'
 
 /** Gera os lançamentos recorrentes do mês (só até o mês atual). */
@@ -12,15 +13,7 @@ export function useGenerateRecurrences(month: string) {
   const recs = useList<Recurrence>('recurrences')
   useEffect(() => {
     if (!recs || month > currentMonth()) return
-    let cancel = false
-    void (async () => {
-      const all = Object.values((await repo.exportDoc()).records.transactions) as Transaction[]
-      for (const d of dueRecurrences(recs, month, all)) {
-        if (cancel) return
-        await repo.put<Transaction>('transactions', d, me)
-      }
-    })()
-    return () => { cancel = true }
+    void generateRecurrences(repo, month, me)
   }, [repo, me, recs, month])
 }
 

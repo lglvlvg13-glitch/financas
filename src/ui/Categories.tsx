@@ -69,11 +69,8 @@ function CategoryForm({ initial, kind, others, onClose }: {
   }
 
   const remove = async (opts: { moveToCategoryId?: string }) => {
-    const ids = await repo.removeCascade('categories', initial!.id, me, opts)
-    undo({ message: 'Categoria excluída.', undo: async () => {
-      await repo.restore('categories', ids[0], me)
-      for (const id of ids.slice(1)) await repo.restore('transactions', id, me)
-    } })
+    const affected = await repo.removeCascade('categories', initial!.id, me, opts)
+    undo({ message: 'Categoria excluída.', undo: () => repo.restoreAll(affected, me) })
     onClose()
   }
 
