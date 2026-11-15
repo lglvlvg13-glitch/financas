@@ -17,7 +17,7 @@ Crie uma conta Gmail nova, só para isso (por exemplo, `financas.sobrenome@gmail
 ### 2. Coloque o código no GitHub
 
 1. Crie uma conta em [github.com](https://github.com), se ainda não tiver.
-2. Crie um repositório novo (pode ser privado), por exemplo `financas`.
+2. Crie um repositório novo **público**, por exemplo `financas` (no plano gratuito do GitHub, o Pages só publica repositórios públicos). Só o código fica público: os dados de vocês ficam no Drive, e o Client ID fica num secret.
 3. Envie esta pasta do projeto para ele.
 
 O endereço do app será `https://SEU-USUARIO.github.io/financas/`.
