@@ -130,3 +130,14 @@ p { margin: 0 0 12px; }
 .bar.over > span { background: var(--saida); }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* Resumo: a sobra é o número que importa; entradas e saídas ficam abaixo dela */
+.sobra { display: grid; gap: 2px; }
+.sobra strong { font-size: clamp(40px, 11vw, 60px); line-height: 1.05; font-weight: 800; letter-spacing: -0.03em; }
+.flow { display: flex; gap: 28px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--linha); }
+.flow > div { display: grid; }
+.flow strong { font-size: 20px; }
+.compare { width: 100%; border-collapse: collapse; background: var(--cartao); border: 1px solid var(--linha); border-radius: var(--raio); overflow: hidden; }
+.compare th, .compare td { padding: 10px 16px; text-align: right; border-top: 1px solid var(--linha); }
+.compare thead th { border-top: 0; font-size: 13px; color: var(--tinta-2); font-weight: 600; }
+.compare th[scope='row'] { text-align: left; }
