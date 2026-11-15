@@ -42,7 +42,8 @@ export class Repo {
   private async write(c: Collection, rec: AnyRecord) {
     await this.db.transaction('rw', this.db.coll(c), this.db.state, async () => {
       await this.db.coll(c).put(rec)
-      await this.db.state.put({ k: 'dirty', v: true })
+      const gen = ((await this.db.state.get('gen'))?.v as number | undefined) ?? 0
+      await this.db.state.put({ k: 'gen', v: gen + 1 })
     })
   }
 
@@ -131,12 +132,19 @@ export class Repo {
     this.changed()
   }
 
-  async isDirty(): Promise<boolean> {
-    return (await this.db.state.get('dirty'))?.v === true
+  /** Contador de gravações locais; usado para saber se algo mudou durante um envio. */
+  async generation(): Promise<number> {
+    return ((await this.db.state.get('gen'))?.v as number | undefined) ?? 0
   }
 
-  async markClean(): Promise<void> {
-    await this.db.state.put({ k: 'dirty', v: false })
+  async isDirty(): Promise<boolean> {
+    const clean = ((await this.db.state.get('cleanGen'))?.v as number | undefined) ?? 0
+    return (await this.generation()) > clean
+  }
+
+  /** Marca como enviado tudo o que foi gravado até `upTo` (padrão: agora). */
+  async markClean(upTo?: number): Promise<void> {
+    await this.db.state.put({ k: 'cleanGen', v: upTo ?? (await this.generation()) })
   }
 
   async ensureDefaults(by: ProfileId): Promise<void> {
