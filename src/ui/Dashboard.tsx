@@ -56,7 +56,14 @@ export function Dashboard({ go }: { go: (p: Page) => void }) {
   // Atrasados de qualquer mês: é o que falta pagar.
   const ctx = { paid: paidInvoices(txs, cards), cards, today: now }
   const overdue = txs.filter(t => !t.deletedAt && !t.cardPayment && txStatus(t, ctx) === 'atrasado')
-  const overdueOut = overdue.filter(t => t.kind !== 'receita')
+  // Contas soltas contam uma a uma; compras de cartão viram uma "fatura atrasada" por cartão e mês.
+  const overdueOut = overdue.filter(t => t.kind !== 'receita' && !t.cardId)
+  const lateInvoices = [...overdue.filter(t => t.cardId && t.invoiceMonth).reduce((m, t) => {
+    const k = `${t.cardId}|${t.invoiceMonth}`
+    const cur = m.get(k) ?? { cardId: t.cardId!, month: t.invoiceMonth!, cents: 0 }
+    cur.cents += t.amountCents
+    return m.set(k, cur)
+  }, new Map<string, { cardId: string; month: string; cents: number }>()).values()].sort((a, b) => a.month.localeCompare(b.month))
   const overdueIn = overdue.filter(t => t.kind === 'receita')
   const sum = (list: Transaction[]) => list.reduce((s, t) => s + t.amountCents, 0)
 
@@ -136,6 +143,13 @@ export function Dashboard({ go }: { go: (p: Page) => void }) {
             <em>Ver e marcar como pago</em>
           </button>
         )}
+        {lateInvoices.map(f => (
+          <button key={`${f.cardId}|${f.month}`} className="alert out" onClick={() => go('cartoes')}>
+            <b>Fatura {cards.find(c => c.id === f.cardId)?.name ?? 'do cartão'} de {MONTHS_FULL[Number(f.month.slice(5)) - 1]} atrasada</b>
+            <span className="num">{formatBRL(f.cents)}</span>
+            <em>Ver e pagar a fatura</em>
+          </button>
+        ))}
         {overdueIn.length > 0 && (
           <button className="alert in" onClick={() => { openWithStatus('atrasado'); go('lancamentos') }}>
             <b>{plural(overdueIn.length, 'receita atrasada', 'receitas atrasadas')}</b>

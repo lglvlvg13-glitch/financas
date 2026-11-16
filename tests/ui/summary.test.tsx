@@ -138,3 +138,18 @@ test('Relatório do ano tem as linhas da planilha', async () => {
     expect(within(table).getByRole('rowheader', { name: label })).toBeInTheDocument()
   }
 })
+
+test('Painel agrupa compras de cartão atrasadas numa fatura só', async () => {
+  const s = await setup({ ready: true })
+  await seed(s.repo)
+  const y = D.slice(0, 4)
+  await s.repo.put<import('../../src/domain/types').Card>('cards', { id: 'k1', name: 'Nubank', limitCents: 900000, closingDay: 5, dueDay: 10 }, 'u1')
+  for (const v of [1000, 2000, 3000]) {
+    await s.repo.put<Transaction>('transactions', { kind: 'despesa', amountCents: v, date: `${y}-01-02`, categoryId: 'cat-lazer', profileId: 'u1', cardId: 'k1', invoiceMonth: `${y}-01` }, 'u1')
+  }
+  await waitFor(() => expect(screen.getByRole('button', { name: /Fatura Nubank/ })).toHaveTextContent('R$ 60,00'))
+  const alert = screen.getByRole('button', { name: /Fatura Nubank/ })
+  expect(screen.queryByRole('button', { name: /3 contas atrasadas/ })).toBeNull()
+  await s.user.click(alert)
+  expect(await screen.findByRole('heading', { name: 'Cartões' })).toBeInTheDocument()
+})
