@@ -111,7 +111,7 @@ export function StatementForm({ card, month, onClose }: { card: Card; month: str
       <div className="btns">
         <button className="btn" onClick={() => save(false)}>Salvar e lançar outra</button>
         <button className="btn sec" onClick={() => save(true)}>Salvar e fechar</button>
-        <button className="btn sec" onClick={onClose}>Concluir</button>
+        <button className="btn sec" onClick={onClose}>Fechar</button>
       </div>
 
       <div className="stmt-total" role="status">Total lançado nesta fatura: <b className="num">{formatBRL(s.totalCents)}</b></div>
