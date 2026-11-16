@@ -4,7 +4,6 @@ import { Confirm, Dialog, plural } from './common'
 import { useUndo } from './UndoToast'
 import { formatBRL, parseBRL } from '../domain/money'
 import type { Category } from '../domain/types'
-import { EXAMPLES } from '../domain/defaults'
 
 export function Categories() {
   const cats = useList<Category>('categories') ?? []
@@ -55,6 +54,15 @@ function CategoryForm({ initial, kind, others, onClose }: {
   const undo = useUndo()
   const [name, setName] = useState(initial?.name ?? '')
   const [group, setGroup] = useState<'necessidade' | 'desejo'>(initial?.group ?? 'desejo')
+  type Item = NonNullable<Category['items']>[number]
+  const [items, setItems] = useState<Item[]>(initial?.items ?? [])
+  const [newItem, setNewItem] = useState('')
+  const setItemGroup = (name: string, g: Item['group']) => setItems(items.map(x => x.name === name ? { ...x, group: g } : x))
+  const addItem = () => {
+    const name = newItem.trim()
+    if (!name || items.some(x => x.name.toLowerCase() === name.toLowerCase())) return
+    setItems([...items, { name, group }]); setNewItem('')
+  }
   const [budget, setBudget] = useState(initial?.monthlyBudgetCents ? formatBRL(initial.monthlyBudgetCents).replace('R$ ', '') : '')
   const [error, setError] = useState<string>()
   const [linked, setLinked] = useState<number>()
@@ -66,8 +74,11 @@ function CategoryForm({ initial, kind, others, onClose }: {
     const cents = budget.trim() ? parseBRL(budget) : undefined
     if (cents === null) return setError('Orçamento inválido.')
     const rec: Partial<Category> = { ...initial, name: name.trim(), kind }
-    if (kind === 'despesa') rec.group = group
-    else delete rec.group
+    if (kind === 'despesa') {
+      rec.group = group
+      if (items.length) rec.items = items
+      else delete rec.items
+    } else { delete rec.group; delete rec.items }
     if (cents) rec.monthlyBudgetCents = cents
     else delete rec.monthlyBudgetCents
     await repo.put<Category>('categories', rec as Category, me)
@@ -88,14 +99,36 @@ function CategoryForm({ initial, kind, others, onClose }: {
       </div>
       {kind === 'despesa' && !initial?.system && (
         <div className="field">
-          <span className="lbl">No método 50/30/20</span>
+          <span className="lbl">No método 50/30/20{items.length ? ' (quando o item não for escolhido)' : ''}</span>
           <div className="seg" role="group" aria-label="No método 50/30/20">
             <button aria-pressed={group === 'necessidade'} onClick={() => setGroup('necessidade')}>Necessidade</button>
             <button aria-pressed={group === 'desejo'} onClick={() => setGroup('desejo')}>Desejo</button>
           </div>
         </div>
       )}
-      {initial && EXAMPLES[initial.id] && <p className="hint">O que entra aqui: {EXAMPLES[initial.id].join(', ')}.</p>}
+      {kind === 'despesa' && !initial?.system && (
+        <div className="field">
+          <span className="lbl">Itens e classificação</span>
+          <span className="hint">Necessidade = despesa fixa, que não dá para cortar. Desejo = dá para cortar ou adiar. Ao lançar, escolher o item já classifica.</span>
+          <ul className="items-edit">
+            {items.map(x => (
+              <li key={x.name} role="group" aria-label={x.name}>
+                <span>{x.name}</span>
+                <div className="seg small">
+                  <button aria-pressed={x.group === 'necessidade'} onClick={() => setItemGroup(x.name, 'necessidade')}>Necessidade</button>
+                  <button aria-pressed={x.group === 'desejo'} onClick={() => setItemGroup(x.name, 'desejo')}>Desejo</button>
+                </div>
+                <button className="x" aria-label={`Tirar o item ${x.name}`} onClick={() => setItems(items.filter(y => y.name !== x.name))}>×</button>
+              </li>
+            ))}
+          </ul>
+          <div className="add-item">
+            <input aria-label="Novo item" placeholder="Novo item (ex.: Padaria)" value={newItem} onChange={e => setNewItem(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') addItem() }} />
+            <button className="mini" onClick={addItem}>Adicionar item</button>
+          </div>
+        </div>
+      )}
       {kind === 'despesa' && !initial?.system && (
         <div className="field">
           <label htmlFor="cat-orc">Orçamento mensal (R$, opcional)</label>

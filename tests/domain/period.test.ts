@@ -109,3 +109,15 @@ test('cada lançamento pode ser Necessidade ou Desejo, independente da categoria
   expect(s.method.buckets[0].realCents).toBe(95000)
   expect(s.method.buckets[1].realCents).toBe(20000)
 })
+
+import { resolveGroup } from '../../src/domain/period'
+test('classificação por item: lançamento > item da categoria > categoria > desejo', () => {
+  const ali: Category = { id: 'cat-ali', name: 'Alimentação', kind: 'despesa', group: 'necessidade', updatedAt: 1, updatedBy: 'u1',
+    items: [{ name: 'Supermercado', group: 'necessidade' }, { name: 'Restaurantes e delivery', group: 'desejo' }] }
+  const t = (o: Partial<Transaction>) => tx({ categoryId: 'cat-ali', ...o })
+  expect(resolveGroup(t({}), ali)).toBe('necessidade')
+  expect(resolveGroup(t({ item: 'Restaurantes e delivery' }), ali)).toBe('desejo')
+  expect(resolveGroup(t({ item: 'Restaurantes e delivery', group: 'necessidade' }), ali)).toBe('necessidade')
+  expect(resolveGroup(t({ item: 'Item apagado' }), ali)).toBe('necessidade')
+  expect(resolveGroup(t({}), undefined)).toBe('desejo')
+})

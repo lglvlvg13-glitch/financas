@@ -64,11 +64,13 @@ test('investimento é um terceiro tipo com as categorias de investimento', async
   await waitFor(async () => expect((await s.repo.list<Transaction>('transactions'))[0]?.kind).toBe('investimento'))
 })
 
-test('dica mostra os exemplos da categoria escolhida', async () => {
+test('os itens da planilha aparecem com a classificação de cada um', async () => {
   const s = await ready()
   const dlg = await openNew(s.user)
   await s.user.selectOptions(within(dlg).getByLabelText('Categoria'), 'cat-servicos')
-  expect(within(dlg).getByText(/Energia elétrica, Água e esgoto/)).toBeInTheDocument()
+  const item = within(dlg).getByLabelText('Item')
+  expect(within(item).getByRole('option', { name: 'Energia elétrica (Necessidade)' })).toBeInTheDocument()
+  expect(within(item).getByRole('option', { name: 'TV por assinatura / streaming (Desejo)' })).toBeInTheDocument()
 })
 
 test('Lançador: repetir por 3 meses define o fim da recorrência', async () => {
@@ -117,4 +119,33 @@ test('sem mudar, o lançamento segue a categoria (não grava grupo próprio)', a
   await s.user.click(within(dlg).getByRole('button', { name: 'Salvar' }))
   await waitFor(async () => expect(await s.repo.list('transactions')).toHaveLength(1))
   expect((await s.repo.list<Transaction>('transactions'))[0].group).toBeUndefined()
+})
+
+test('escolher o item já classifica: restaurante = Desejo', async () => {
+  const s = await ready()
+  const dlg = await openNew(s.user)
+  await s.user.type(within(dlg).getByLabelText('Valor (R$)'), '90')
+  await s.user.selectOptions(within(dlg).getByLabelText('Categoria'), 'cat-alimentacao')
+  await s.user.selectOptions(within(dlg).getByLabelText('Item'), 'Restaurantes e delivery')
+  expect(within(within(dlg).getByRole('group', { name: 'No método 50/30/20' })).getByRole('button', { name: /Desejo/ })).toHaveAttribute('aria-pressed', 'true')
+  await s.user.selectOptions(within(dlg).getByLabelText('Onde'), 'a:a1')
+  await s.user.click(within(dlg).getByRole('button', { name: 'Salvar' }))
+  await waitFor(async () => expect((await s.repo.list<Transaction>('transactions'))[0]?.item).toBe('Restaurantes e delivery'))
+  expect((await s.repo.list<Transaction>('transactions'))[0].group).toBeUndefined()
+})
+
+test('em Categorias dá para mudar a classificação de cada item', async () => {
+  const s = await setup({ ready: true })
+  await s.user.click(await screen.findByRole('button', { name: 'Mais' }))
+  await s.user.click(await screen.findByRole('button', { name: 'Ajustes' }))
+  await s.user.click(await screen.findByRole('button', { name: 'Categorias e orçamento' }))
+  await s.user.click(await screen.findByRole('button', { name: /^Alimentação/ }))
+  const dlg = await screen.findByRole('dialog')
+  const row = within(dlg).getByRole('group', { name: 'Lanches e cafés' })
+  await s.user.click(within(row).getByRole('button', { name: 'Necessidade' }))
+  await s.user.click(within(dlg).getByRole('button', { name: 'Salvar' }))
+  await waitFor(async () => {
+    const c = await s.repo.get<import('../../src/domain/types').Category>('categories', 'cat-alimentacao')
+    expect(c?.items?.find(i => i.name === 'Lanches e cafés')?.group).toBe('necessidade')
+  })
 })

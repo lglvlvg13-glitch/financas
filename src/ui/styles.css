@@ -275,3 +275,9 @@ p { margin: 0 0 12px; }
 .top .b-head .num { white-space: nowrap; }
 .stmt-total { margin-top: 18px; padding: 12px 14px; background: #eef3f8; border-radius: var(--raio-p); font-size: 15px; }
 .stmt-list { margin-top: 10px; }
+.items-edit { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.items-edit li { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid #edf1f0; font-size: 14px; }
+.seg.small button { min-height: 34px; padding: 0 10px; font-size: 13px; }
+.items-edit .x { border: 0; background: none; font-size: 20px; color: var(--tinta-2); width: 36px; height: 36px; cursor: pointer; border-radius: 50%; }
+.add-item { display: flex; gap: 8px; margin-top: 8px; }
+.add-item input { flex: 1; border: 1px solid #b7c4c3; border-radius: var(--raio-p); padding: 8px 10px; min-height: 40px; }

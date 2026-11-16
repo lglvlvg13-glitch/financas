@@ -23,6 +23,8 @@ export interface Category extends Meta {
   kind: TxKind
   /** Classificação do método 50/30/20 (só despesas). Sem valor = Desejo, como na planilha. */
   group?: 'necessidade' | 'desejo'
+  /** Itens da categoria (ex.: Supermercado, Restaurantes), cada um com sua classificação no 50/30/20. */
+  items?: Array<{ name: string; group: 'necessidade' | 'desejo' }>
   monthlyBudgetCents?: number
   system?: boolean
 }
@@ -60,6 +62,8 @@ export interface Transaction extends Meta {
   /** Necessidade ou Desejo só deste lançamento (ex.: mercado x restaurante, ambos em Alimentação).
    *  Sem valor, vale o da categoria. */
   group?: 'necessidade' | 'desejo'
+  /** Item da categoria escolhido (ex.: "Restaurantes e delivery"). */
+  item?: string
 }
 
 export type TransactionDraft = Omit<Transaction, keyof Meta>

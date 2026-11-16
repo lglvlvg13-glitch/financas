@@ -79,6 +79,13 @@ export function proratedBudget(monthlyCents: number, range: Range): number {
   return total
 }
 
+/** Necessidade ou Desejo de um lançamento: escolha do lançamento > item da categoria > categoria > desejo. */
+export function resolveGroup(t: Transaction, cat?: Category): 'necessidade' | 'desejo' {
+  if (t.group) return t.group
+  const item = t.item ? cat?.items?.find(x => x.name === t.item) : undefined
+  return item?.group ?? cat?.group ?? 'desejo'
+}
+
 export function periodSummary(range: Range, data: SummaryData, opts: SummaryOpts) {
   const rows = countedIn(range, data, opts)
   const totals = zero()
@@ -99,10 +106,10 @@ export function periodSummary(range: Range, data: SummaryData, opts: SummaryOpts
     }))
     .sort((a, b) => b.spentCents - a.spentCents)
 
-  // 50/30/20: despesas de categorias "necessidade" x o resto (sem grupo = desejo, como na planilha).
-  const group = new Map(cats.map(c => [c.id, c.group]))
+  // 50/30/20: Necessidade x Desejo de cada lançamento (sem classificação = desejo, como na planilha).
+  const byId = new Map(cats.map(c => [c.id, c]))
   let needReal = 0
-  for (const { t } of rows) if (t.kind === 'despesa' && (t.group ?? group.get(t.categoryId)) === 'necessidade') needReal += t.amountCents
+  for (const { t } of rows) if (t.kind === 'despesa' && resolveGroup(t, byId.get(t.categoryId)) === 'necessidade') needReal += t.amountCents
   const m = methodById(opts.methodId)
   const plan = (pct: number) => Math.round(totals.incomeCents * pct / 100)
   const buckets = [

@@ -38,6 +38,7 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
   const [paidDate, setPaidDate] = useState(initial?.paidDate ?? '')
   /** Necessidade/Desejo só deste lançamento; undefined = segue a categoria. */
   const [groupOverride, setGroupOverride] = useState(initial?.group)
+  const [item, setItem] = useState(initial?.item ?? '')
   const [note, setNote] = useState(initial?.note ?? '')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -75,12 +76,17 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
     }
     function withGroup(t: Transaction): Transaction {
       const out = { ...t }
-      delete out.group
+      delete out.group; delete out.item
       return Object.assign(out, groupFields)
     }
     // Situação (só fora do cartão: compra no cartão segue a fatura).
-    const catGroup = categories.find(c => c.id === categoryId)?.group ?? 'desejo'
-    const groupFields = kind === 'despesa' && groupOverride && groupOverride !== catGroup ? { group: groupOverride } : {}
+    const catNow = categories.find(c => c.id === categoryId)
+    const itemNow = kind === 'despesa' && item && catNow?.items?.some(x => x.name === item) ? item : undefined
+    const autoGroup = catNow?.items?.find(x => x.name === itemNow)?.group ?? catNow?.group ?? 'desejo'
+    const groupFields = {
+      ...(itemNow ? { item: itemNow } : {}),
+      ...(kind === 'despesa' && groupOverride && groupOverride !== autoGroup ? { group: groupOverride } : {}),
+    }
     Object.assign(base, groupFields)
     const paidFields = cardId || isPayment ? {}
       : isPaid ? (paidDate && paidDate !== date ? { paidDate } : {})
@@ -97,6 +103,7 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
       const next: Transaction = { ...initial, ...base }
       delete next.pending; delete next.paidDate
       if (!base.group) delete next.group
+      if (!base.item) delete next.item
       Object.assign(next, paidFields)
       if (!cardId) { delete next.cardId; delete next.invoiceMonth }
       if (!accountId) delete next.accountId
@@ -139,8 +146,10 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
 
   const catOptions = categories.filter(c => c.kind === kind && (!c.system || c.id === initial?.categoryId))
   const chosen = categories.find(c => c.id === categoryId)
-  const hint = chosen && EXAMPLES[chosen.id] ? `O que entra aqui: ${EXAMPLES[chosen.id].join(', ')}.` : undefined
-  const effectiveGroup = groupOverride ?? chosen?.group ?? 'desejo'
+  const items = kind === 'despesa' ? chosen?.items ?? [] : []
+  const hint = chosen && !items.length && EXAMPLES[chosen.id] ? `O que entra aqui: ${EXAMPLES[chosen.id].join(', ')}.` : undefined
+  const itemGroup = items.find(x => x.name === item)?.group
+  const effectiveGroup = groupOverride ?? itemGroup ?? chosen?.group ?? 'desejo'
 
   return (
     <Dialog title={initial ? 'Editar lançamento' : 'Novo lançamento'} onClose={onClose}>
@@ -180,13 +189,23 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
 
       <div className="field">
         <label htmlFor="tx-cat">Categoria</label>
-        <select id="tx-cat" value={categoryId} disabled={isPayment} onChange={e => { setCategoryId(e.target.value); setGroupOverride(undefined) }}>
+        <select id="tx-cat" value={categoryId} disabled={isPayment} onChange={e => { setCategoryId(e.target.value); setGroupOverride(undefined); setItem('') }}>
           <option value="">Escolha…</option>
           {catOptions.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         {errors.category && <span className="err">{errors.category}</span>}
         {hint && <span className="hint">{hint}</span>}
       </div>
+
+      {items.length > 0 && (
+        <div className="field">
+          <label htmlFor="tx-item">Item</label>
+          <select id="tx-item" value={item} onChange={e => { setItem(e.target.value); setGroupOverride(undefined) }}>
+            <option value="">Não especificar</option>
+            {items.map(x => <option key={x.name} value={x.name}>{x.name} ({x.group === 'necessidade' ? 'Necessidade' : 'Desejo'})</option>)}
+          </select>
+        </div>
+      )}
 
       {kind === 'despesa' && chosen && !chosen.system && (
         <div className="field">
@@ -195,7 +214,9 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
             <button aria-pressed={effectiveGroup === 'necessidade'} onClick={() => setGroupOverride('necessidade')}>Necessidade</button>
             <button aria-pressed={effectiveGroup === 'desejo'} onClick={() => setGroupOverride('desejo')}>Desejo</button>
           </div>
-          <span className="hint">Ex.: mercado é Necessidade; restaurante ou delivery pode ser Desejo, mesmo sendo Alimentação.</span>
+          <span className="hint">{groupOverride && groupOverride !== (itemGroup ?? chosen.group ?? 'desejo')
+            ? 'Classificação só deste lançamento.'
+            : 'Necessidade = despesa fixa, que não dá para cortar. Desejo = dá para cortar ou adiar.'}</span>
         </div>
       )}
 

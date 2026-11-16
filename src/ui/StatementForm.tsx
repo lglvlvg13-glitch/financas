@@ -17,6 +17,7 @@ export function StatementForm({ card, month, onClose }: { card: Card; month: str
   const [amount, setAmount] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [groupOverride, setGroupOverride] = useState<'necessidade' | 'desejo'>()
+  const [item, setItem] = useState('')
   const [who, setWho] = useState<ProfileId>(me)
   const [split, setSplit] = useState(false)
   const [current, setCurrent] = useState('1')
@@ -27,9 +28,11 @@ export function StatementForm({ card, month, onClose }: { card: Card; month: str
   const [added, setAdded] = useState<string[]>([])
 
   const s = invoiceSummary(card, month, txs)
-  const catGroup = categories.find(c => c.id === categoryId)?.group ?? 'desejo'
+  const chosen = categories.find(c => c.id === categoryId)
+  const items = chosen?.items ?? []
+  const catGroup = items.find(x => x.name === item)?.group ?? chosen?.group ?? 'desejo'
   const effectiveGroup = groupOverride ?? catGroup
-  const items = s.items.slice().sort((a, b) => b.updatedAt - a.updatedAt)
+  const lines = s.items.slice().sort((a, b) => b.updatedAt - a.updatedAt)
 
   const setCurrentAndDate = (v: string) => {
     setCurrent(v)
@@ -49,12 +52,13 @@ export function StatementForm({ card, month, onClose }: { card: Card; month: str
     setError(undefined)
     const drafts = statementPurchase(
       { kind: 'despesa', amountCents: cents, date, categoryId, profileId: who, cardId: card.id, note: note.trim(),
+        ...(item ? { item } : {}),
         ...(groupOverride && groupOverride !== catGroup ? { group: groupOverride } : {}) },
       { invoiceMonth: month, current: k, total: n, groupId: crypto.randomUUID() })
     for (const d of drafts) await repo.put<Transaction>('transactions', d, me)
     setAdded([...added, drafts[0].note!])
     if (close) return onClose()
-    setNote(''); setAmount(''); setSplit(false); setGroupOverride(undefined); setCurrent('1'); setTotal(''); setDateTouched(false)
+    setNote(''); setAmount(''); setSplit(false); setGroupOverride(undefined); setItem(''); setCurrent('1'); setTotal(''); setDateTouched(false)
     setDate(defaultPurchaseDate(month, card, today(), 1))
     document.getElementById('st-desc')?.focus()
   }
@@ -79,12 +83,21 @@ export function StatementForm({ card, month, onClose }: { card: Card; month: str
       </div>
       <div className="field">
         <label htmlFor="st-cat">Categoria</label>
-        <select id="st-cat" value={categoryId} onChange={e => { setCategoryId(e.target.value); setGroupOverride(undefined) }}>
+        <select id="st-cat" value={categoryId} onChange={e => { setCategoryId(e.target.value); setGroupOverride(undefined); setItem('') }}>
           <option value="">Escolha…</option>
           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        {EXAMPLES[categoryId] && <span className="hint">O que entra aqui: {EXAMPLES[categoryId].join(', ')}.</span>}
+        {!items.length && EXAMPLES[categoryId] && <span className="hint">O que entra aqui: {EXAMPLES[categoryId].join(', ')}.</span>}
       </div>
+      {items.length > 0 && (
+        <div className="field">
+          <label htmlFor="st-item">Item</label>
+          <select id="st-item" value={item} onChange={e => { setItem(e.target.value); setGroupOverride(undefined) }}>
+            <option value="">Não especificar</option>
+            {items.map(x => <option key={x.name} value={x.name}>{x.name} ({x.group === 'necessidade' ? 'Necessidade' : 'Desejo'})</option>)}
+          </select>
+        </div>
+      )}
       {categoryId && (
         <div className="field">
           <span className="lbl">No método 50/30/20</span>
@@ -129,9 +142,9 @@ export function StatementForm({ card, month, onClose }: { card: Card; month: str
 
       <div className="stmt-total" role="status">Total lançado nesta fatura: <b className="num">{formatBRL(s.totalCents)}</b></div>
       <p className="hint" style={{ marginTop: 4 }}>Compare com o total do extrato do banco.</p>
-      {items.length > 0 && (
+      {lines.length > 0 && (
         <ul className="list stmt-list">
-          {items.map(t => (
+          {lines.map(t => (
             <li key={t.id} className="b-head" style={{ padding: '10px 14px' }}>
               <span><b>{t.note ?? categories.find(c => c.id === t.categoryId)?.name}</b>
                 <span className="hint"> {dateLabel(t.date)}{t.installment ? `, parcela ${t.installment.n} de ${t.installment.total}` : ''}</span></span>
