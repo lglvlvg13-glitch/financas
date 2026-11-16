@@ -8,7 +8,7 @@ export function dueRecurrences(recs: Recurrence[], month: string, existing: Tran
     if (r.deletedAt || month < r.startMonth || (r.endMonth && month > r.endMonth)) continue
     // Qualquer lançamento do mês com esta recorrência (mesmo excluído) já conta: excluir foi decisão do usuário.
     if (existing.some(t => t.recurrenceId === r.id && monthOf(t.date) === month)) continue
-    out.push({ ...r.template, date: clampDay(month, r.dayOfMonth), recurrenceId: r.id })
+    out.push({ ...r.template, date: clampDay(month, r.dayOfMonth), recurrenceId: r.id, pending: true })
   }
   return out
 }
@@ -54,9 +54,9 @@ export function monthSummary(month: string, data: SummaryData, profile?: Profile
   return { incomeCents, expenseCents, balanceCents: incomeCents - expenseCents, byCategory, byProfile }
 }
 
-/** Saldo inicial + receitas − despesas lançadas na conta (inclui pagamentos de fatura). */
+/** Saldo inicial + receitas − despesas e investimentos já pagos na conta (inclui pagamentos de fatura). */
 export function accountBalanceCents(account: Account, txs: Transaction[]): number {
   return txs
-    .filter(t => !t.deletedAt && t.accountId === account.id)
+    .filter(t => !t.deletedAt && !t.pending && t.accountId === account.id)
     .reduce((s, t) => s + (t.kind === 'receita' ? t.amountCents : -t.amountCents), account.initialBalanceCents)
 }

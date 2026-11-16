@@ -1,4 +1,7 @@
 import { Repo } from '../../src/data/db'
+import { defaultCategories } from '../../src/domain/defaults'
+import { accountBalanceCents } from '../../src/domain/summary'
+import type { Category, Settings } from '../../src/domain/types'
 import { emptyDoc, type Account, type Profile, type Recurrence, type Transaction } from '../../src/domain/types'
 
 let n = 0
@@ -61,7 +64,7 @@ test('ensureDefaults é idempotente', async () => {
   await repo.ensureDefaults('u1')
   await repo.ensureDefaults('u1')
   expect(await repo.list('profiles')).toHaveLength(2)
-  expect(await repo.list('categories')).toHaveLength(11)
+  expect(await repo.list('categories')).toHaveLength(defaultCategories(0).length)
 })
 
 test('padrões criados offline não apagam um nome editado em outro aparelho', async () => {
@@ -169,4 +172,47 @@ test('mover categoria também muda as recorrências', async () => {
   await repo.put<Recurrence>('recurrences', rec({ categoryId: 'cat-outras-receitas' }), 'u1')
   await repo.removeCascade('categories', 'cat-outras-receitas', 'u1', { moveToCategoryId: 'cat-salario' })
   expect((await repo.get<Recurrence>('recurrences', 'r1'))?.template.categoryId).toBe('cat-salario')
+})
+
+test('padrão antigo nunca editado ganha o nome novo; editado pelo usuário fica', async () => {
+  const repo = newRepo()
+  const old = { kind: 'despesa' as const, updatedAt: 0, updatedBy: 'u1' as const }
+  const doc = emptyDoc()
+  doc.records.categories['cat-saude'] = { id: 'cat-saude', name: 'Saúde', ...old } as Category
+  doc.records.categories['cat-lazer'] = { id: 'cat-lazer', name: 'Diversão', ...old, updatedAt: 5 } as Category
+  doc.records.categories['cat-outros'] = { id: 'cat-outros', name: 'Outros', ...old } as Category
+  doc.records.categories['cat-assinaturas'] = { id: 'cat-assinaturas', name: 'Assinaturas', ...old } as Category
+  await repo.importDoc(doc)
+  await repo.put<Transaction>('transactions', { ...txBase, categoryId: 'cat-assinaturas', accountId: 'a1' }, 'u1')
+  await repo.ensureDefaults('u1')
+  expect((await repo.get<Category>('categories', 'cat-saude'))).toMatchObject({ name: 'Saúde e bem-estar', group: 'necessidade', updatedAt: 0 })
+  expect((await repo.get<Category>('categories', 'cat-lazer'))?.name).toBe('Diversão')
+  expect(await repo.get('categories', 'cat-outros')).toBeUndefined()
+  expect((await repo.get<Category>('categories', 'cat-assinaturas'))?.name).toBe('Assinaturas')
+})
+
+test('preferências (método) sincronizam como coleção', async () => {
+  const a = newRepo(), b = newRepo()
+  await a.put<Settings>('settings', { id: 'app', methodId: 'm2' }, 'u1')
+  await b.importDoc(await a.exportDoc())
+  expect((await b.get<Settings>('settings', 'app'))?.methodId).toBe('m2')
+})
+
+test('saldo da conta conta só o que foi pago; investimento sai da conta', () => {
+  const acc = { id: 'a1', name: 'C', kind: 'corrente' as const, initialBalanceCents: 10000, updatedAt: 1, updatedBy: 'u1' as const }
+  const t = (o: Partial<Transaction>) => ({ id: Math.random().toString(), ...txBase, accountId: 'a1', updatedAt: 1, updatedBy: 'u1' as const, ...o }) as Transaction
+  expect(accountBalanceCents(acc, [t({ amountCents: 1000 }), t({ amountCents: 500, pending: true }), t({ kind: 'investimento', amountCents: 2000 })])).toBe(7000)
+})
+
+import Dexie from 'dexie'
+test('banco de uma versão anterior (sem settings) abre e mantém os dados', async () => {
+  const name = `old-${Math.random()}`
+  const old = new Dexie(name)
+  old.version(1).stores({ device: 'k', state: 'k', profiles: 'id', accounts: 'id', categories: 'id', cards: 'id', transactions: 'id', recurrences: 'id' })
+  await old.table('transactions').put({ id: 't1', ...txBase, accountId: 'a1', updatedAt: 1, updatedBy: 'u1' })
+  old.close()
+  const repo = new Repo(name)
+  expect(await repo.list('transactions')).toHaveLength(1)
+  await repo.put<Settings>('settings', { id: 'app', methodId: 'm3' }, 'u1')
+  expect((await repo.get<Settings>('settings', 'app'))?.methodId).toBe('m3')
 })

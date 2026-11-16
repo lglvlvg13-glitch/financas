@@ -1,6 +1,6 @@
 import Dexie, { type Table } from 'dexie'
 import { mergeDocs } from '../domain/merge'
-import { defaultCategories, defaultProfiles } from '../domain/defaults'
+import { defaultCategories, defaultProfiles, LEGACY_DEFAULT_IDS } from '../domain/defaults'
 import { COLLECTIONS, emptyDoc, type AnyRecord, type Collection, type DataDoc, type Meta, type ProfileId, type Recurrence, type Transaction } from '../domain/types'
 
 export interface DeviceConfig { profileId?: ProfileId; dataFileId?: string; folderId?: string }
@@ -14,7 +14,10 @@ class FinDB extends Dexie {
     super(name)
     const stores: Record<string, string> = { device: 'k', state: 'k' }
     for (const c of COLLECTIONS) stores[c] = 'id'
-    this.version(1).stores(stores)
+    const v1 = { ...stores }
+    delete v1.settings
+    this.version(1).stores(v1)
+    this.version(2).stores(stores) // Fase 1.5: preferências sincronizadas
   }
   coll(c: Collection): Table<AnyRecord, string> { return this.table(c) }
 }
@@ -36,6 +39,12 @@ const recLinkedTo = (c: Linkable, id: string) => (r: Recurrence) =>
   )
 
 export type Affected = Array<[Collection, string]>
+
+/** Mesmo conteúdo, ignorando quem gravou e a ordem das chaves. */
+const sameContent = (a: object, b: object) => {
+  const norm = (o: object) => JSON.stringify(Object.entries(o).filter(([k]) => k !== 'updatedBy').sort(([x], [y]) => x.localeCompare(y)))
+  return norm(a) === norm(b)
+}
 
 export class Repo {
   private db: FinDB
@@ -195,8 +204,21 @@ export class Repo {
     for (const p of defaultProfiles(now)) {
       if (!(await this.db.coll('profiles').get(p.id))) await this.write('profiles', { ...p, updatedBy: by })
     }
+    // Padrão nunca editado (carimbo 0) recebe a versão nova; o que o usuário editou fica como está.
     for (const cat of defaultCategories(now)) {
-      if (!(await this.db.coll('categories').get(cat.id))) await this.write('categories', { ...cat, updatedBy: by })
+      const cur = await this.db.coll('categories').get(cat.id)
+      if (!cur) await this.write('categories', { ...cat, updatedBy: by })
+      else if (cur.updatedAt === 0 && !cur.deletedAt && !sameContent(cur, cat)) {
+        await this.write('categories', { ...cat, updatedBy: by })
+      }
+    }
+    // Padrões da versão anterior que ninguém usa nem editou saem da lista.
+    const used = new Set<string>()
+    for (const t of (await this.db.coll('transactions').toArray()) as unknown as Transaction[]) if (!t.deletedAt) used.add(t.categoryId)
+    for (const r of (await this.db.coll('recurrences').toArray()) as unknown as Recurrence[]) if (!r.deletedAt) used.add(r.template.categoryId)
+    for (const id of LEGACY_DEFAULT_IDS) {
+      const cur = await this.db.coll('categories').get(id)
+      if (cur && cur.updatedAt === 0 && !cur.deletedAt && !used.has(id)) await this.setDeleted('categories', id, by, true)
     }
     this.changed()
   }

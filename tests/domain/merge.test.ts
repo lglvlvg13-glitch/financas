@@ -42,6 +42,12 @@ test('edição posterior à exclusão revive o registro', () => {
   expect(r.records.transactions.t1.deletedAt).toBeUndefined()
 })
 
+test('documento antigo sem a coleção settings junta sem erro', () => {
+  const old = emptyDoc() as unknown as { records: Record<string, unknown> }
+  delete old.records.settings
+  expect(mergeDocs(old as never, emptyDoc()).records.settings).toEqual({})
+})
+
 test('merge é comutativo', () => {
   const a = docWith(tx('t1', { updatedAt: 50, updatedBy: 'u1', amountCents: 1 }), tx('t2'))
   const b = docWith(tx('t1', { updatedAt: 50, updatedBy: 'u2', amountCents: 2 }), tx('t3'))
@@ -52,5 +58,5 @@ test('categorias padrão têm ids fixos', () => {
   const a = emptyDoc(), b = emptyDoc()
   for (const c of defaultCategories(10)) a.records.categories[c.id] = c
   for (const c of defaultCategories(20)) b.records.categories[c.id] = c
-  expect(Object.keys(mergeDocs(a, b).records.categories)).toHaveLength(11)
+  expect(Object.keys(mergeDocs(a, b).records.categories)).toHaveLength(defaultCategories(0).length)
 })

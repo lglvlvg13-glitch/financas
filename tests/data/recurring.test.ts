@@ -43,3 +43,13 @@ test('recorrência de conta excluída não gera lançamento', async () => {
   await generateRecurrences(r, '2026-12', 'u1')
   expect((await r.list<Transaction>('transactions')).filter(t => t.recurrenceId)).toHaveLength(0)
 })
+
+test('recorrente gerado chega como previsto e para no fim', async () => {
+  const r = await newRepo()
+  await r.put<Recurrence>('recurrences', { ...(await r.get<Recurrence>('recurrences', 'r1'))!, endMonth: '2026-12' }, 'u1')
+  await generateRecurrences(r, '2026-12', 'u1')
+  await generateRecurrences(r, '2027-01', 'u1')
+  const got = (await r.list<Transaction>('transactions')).filter(t => t.recurrenceId)
+  expect(got).toHaveLength(1)
+  expect(got[0].pending).toBe(true)
+})
