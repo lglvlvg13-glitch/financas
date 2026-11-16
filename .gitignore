@@ -1,3 +1,4 @@
 .plan-progress/
 node_modules/
 dist/
+dist-demo
