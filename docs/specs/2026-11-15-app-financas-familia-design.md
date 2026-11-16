@@ -16,5 +16,6 @@ https://claude.ai/artifact/LUJNH26ToL5FvombfF7muq
 ## Fases
 
 1. Controle financeiro: login, Drive, perfis, lançamentos, categorias, contas, cartões e faturas, sincronização e offline.
+1.5. Tudo da planilha da família + resumo por período (ver docs/specs/2026-11-16-fase-1-5-planilha-design.md).
 2. Planejamento: objetivos, questionário de perfil, diagnóstico, plano de dívidas, plano de reserva.
-3. Investimentos: rotina de dados de mercado (CVM + cotações gratuitas), renda fixa, ações (Barsi), FIIs por faixa de cota, carteira.
+3. ~~Investimentos~~ — retirada do escopo em 16/11/2026 a pedido do usuário. O app fica só com controle e planejamento; "Investimento" existe apenas como tipo de lançamento (registro do que foi guardado), sem análise de mercado.
