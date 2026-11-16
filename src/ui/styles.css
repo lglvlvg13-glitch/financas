@@ -273,3 +273,5 @@ p { margin: 0 0 12px; }
 .tag.need { background: #e3ebf3; color: var(--tinta); }
 .tag.want { background: #f6ecd9; color: #6b4600; }
 .top .b-head .num { white-space: nowrap; }
+.stmt-total { margin-top: 18px; padding: 12px 14px; background: #eef3f8; border-radius: var(--raio-p); font-size: 15px; }
+.stmt-list { margin-top: 10px; }

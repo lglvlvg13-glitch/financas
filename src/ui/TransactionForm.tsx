@@ -44,12 +44,15 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
   const accountId = where.startsWith('a:') ? where.slice(2) : undefined
   const card = cards.find(c => c.id === cardId)
   const isParcela = !!initial?.installment
-  const lockStructure = isParcela && scope === 'uma'   // parcela isolada: só valor, categoria e observação
+  // Compra lançada pelo extrato a partir da parcela k > 1: as parcelas anteriores não existem no app,
+  // então "todas" só muda valor, categoria e observação de cada uma, sem recriar.
+  const midStream = isParcela && Math.min(...group.map(t => t.installment!.n)) > 1
+  const lockStructure = isParcela && (scope === 'uma' || midStream)   // parcela isolada: só valor, categoria e observação
   const groupTotal = group.reduce((s, t) => s + t.amountCents, 0)
 
   const setScopeAndAmount = (s: Scope) => {
     setScope(s)
-    if (initial) setAmount(centsToInput(s === 'todas' ? groupTotal : initial.amountCents))
+    if (initial) setAmount(centsToInput(s === 'todas' && !midStream ? groupTotal : initial.amountCents))
   }
 
   const save = async () => {
@@ -73,7 +76,9 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
       : isPaid ? (paidDate && paidDate !== date ? { paidDate } : {})
       : { pending: true as const }
 
-    if (initial && isParcela && scope === 'uma') {
+    if (initial && isParcela && scope === 'todas' && midStream) {
+      for (const t of group) await repo.put<Transaction>('transactions', { ...t, amountCents: cents!, categoryId, note: note.trim() || undefined }, me)
+    } else if (initial && isParcela && scope === 'uma') {
       await repo.put<Transaction>('transactions', { ...initial, amountCents: cents!, categoryId, note: note.trim() || undefined }, me)
     } else if (initial && isParcela && scope === 'todas') {
       for (const t of group) await repo.remove('transactions', t.id, me)
@@ -153,7 +158,7 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
       )}
 
       <div className="field">
-        <label htmlFor="tx-valor">{isParcela ? (scope === 'todas' ? 'Valor total da compra (R$)' : 'Valor (R$)') : 'Valor (R$)'}</label>
+        <label htmlFor="tx-valor">{isParcela && scope === 'todas' ? (midStream ? 'Valor de cada parcela (R$)' : 'Valor total da compra (R$)') : 'Valor (R$)'}</label>
         <input id="tx-valor" inputMode="decimal" placeholder="0,00" value={amount} onChange={e => setAmount(e.target.value)} />
         {errors.amount && <span className="err">{errors.amount}</span>}
       </div>

@@ -53,3 +53,23 @@ export function limitUsedCents(card: Card, txs: Transaction[]): number {
   }
   return Math.max(0, used)
 }
+
+/** Compra digitada a partir do extrato da fatura: "parcela k de N" cria só da k-ésima em diante,
+ *  a primeira delas na fatura escolhida. `amountCents` é o valor de UMA parcela, como no extrato. */
+export function statementPurchase(base: PurchaseBase, o: { invoiceMonth: string; current: number; total: number; groupId: string }): TransactionDraft[] {
+  if (o.total <= 1) return [{ ...base, invoiceMonth: o.invoiceMonth }]
+  const out: TransactionDraft[] = []
+  for (let n = o.current; n <= o.total; n++) {
+    out.push({ ...base, invoiceMonth: addMonths(o.invoiceMonth, n - o.current), installment: { groupId: o.groupId, n, total: o.total } })
+  }
+  return out
+}
+
+/** Data sugerida para uma compra da fatura de `invoiceMonth`: hoje, se cair nela; senão o primeiro dia do período.
+ *  Para "parcela k", recua k−1 meses (a compra original foi antes). */
+export function defaultPurchaseDate(invoiceMonth: string, card: Pick<Card, 'closingDay'>, today: string, current: number): string {
+  const inPeriod = invoiceMonthFor(today, card.closingDay) === invoiceMonth
+  const first = clampDay(addMonths(invoiceMonth, -1), card.closingDay)
+  const d = inPeriod ? today : first
+  return clampDay(addMonths(monthOf(d), -(current - 1)), dayOf(d))
+}

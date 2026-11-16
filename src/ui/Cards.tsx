@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useApp, useList } from './context'
 import { Confirm, currentMonth, dateLabel, Dialog, MonthNav, plural } from './common'
 import { useUndo } from './UndoToast'
+import { StatementForm } from './StatementForm'
 import { formatBRL, parseBRL } from '../domain/money'
 import { addMonths, today } from '../domain/dates'
 import { invoiceMonthFor, invoiceSummary, limitUsedCents } from '../domain/invoice'
@@ -16,6 +17,7 @@ export function Cards() {
   const txs = useList<Transaction>('transactions') ?? []
   const [editing, setEditing] = useState<Card | 'novo'>()
   const [paying, setPaying] = useState<{ card: Card; cents: number }>()
+  const [entering, setEntering] = useState<Card>()
 
   return (
     <>
@@ -27,17 +29,19 @@ export function Cards() {
       {(cards ?? []).map(card => (
         <InvoicePanel key={card.id} card={card} month={month} txs={txs}
           onEdit={() => setEditing(card)}
+          onEnter={() => setEntering(card)}
           onPay={cents => setPaying({ card, cents })} />
       ))}
       <div className="btns"><button className="btn" onClick={() => setEditing('novo')}>Novo cartão</button></div>
       {editing && <CardForm initial={editing === 'novo' ? undefined : editing} onClose={() => setEditing(undefined)} />}
+      {entering && <StatementForm card={entering} month={month} onClose={() => setEntering(undefined)} />}
       {paying && <PayForm card={paying.card} month={month} cents={paying.cents} onClose={() => setPaying(undefined)} />}
     </>
   )
 }
 
-function InvoicePanel({ card, month, txs, onEdit, onPay }: {
-  card: Card; month: string; txs: Transaction[]; onEdit: () => void; onPay: (cents: number) => void
+function InvoicePanel({ card, month, txs, onEdit, onPay, onEnter }: {
+  card: Card; month: string; txs: Transaction[]; onEdit: () => void; onPay: (cents: number) => void; onEnter: () => void
 }) {
   const cats = useList<Category>('categories') ?? []
   const s = invoiceSummary(card, month, txs)
@@ -74,7 +78,8 @@ function InvoicePanel({ card, month, txs, onEdit, onPay }: {
         </details>
       )}
       <div className="btns">
-        {!paid && remaining > 0 && <button className="btn" onClick={() => onPay(remaining)}>Pagar fatura</button>}
+        <button className="btn" onClick={onEnter}>Lançar compras</button>
+        {!paid && remaining > 0 && <button className="btn sec" onClick={() => onPay(remaining)}>Pagar fatura</button>}
         <button className="btn sec" onClick={onEdit}>Editar cartão</button>
       </div>
     </section>

@@ -13,7 +13,11 @@ async function ready() {
 async function openNew(user: Awaited<ReturnType<typeof setup>>['user']) {
   await user.click(await screen.findByRole('button', { name: 'Lançamentos' }))
   await user.click(await screen.findByRole('button', { name: 'Novo lançamento' }))
-  return screen.findByRole('dialog')
+  const dlg = await screen.findByRole('dialog')
+  // As listas (categorias, contas) carregam do banco local logo depois de abrir.
+  await within(dlg).findByRole('option', { name: 'Moradia' })
+  await within(dlg).findByRole('option', { name: 'Itaú' })
+  return dlg
 }
 
 test('conta a pagar: sem "Já está pago" fica pendente; marcar como pago grava a data', async () => {

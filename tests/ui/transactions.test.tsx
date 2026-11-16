@@ -15,7 +15,9 @@ async function withAccountAndCard(repo: Awaited<ReturnType<typeof setup>>['repo'
 async function openNew(user: Awaited<ReturnType<typeof setup>>['user']) {
   await user.click(await screen.findByRole('button', { name: 'Lançamentos' }))
   await user.click(await screen.findByRole('button', { name: 'Novo lançamento' }))
-  return screen.findByRole('dialog')
+  const dlg = await screen.findByRole('dialog')
+  await within(dlg).findByRole('option', { name: 'Moradia' })
+  return dlg
 }
 
 test('valor inválido bloqueia o salvar', async () => {
