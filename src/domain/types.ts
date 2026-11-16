@@ -12,13 +12,17 @@ export interface Profile extends Meta { id: ProfileId; name: string }
 
 export interface Account extends Meta {
   name: string
-  kind: 'corrente' | 'poupanca' | 'carteira'
+  kind: 'corrente' | 'poupanca' | 'carteira' | 'pix'
   initialBalanceCents: number
 }
 
+export type TxKind = 'receita' | 'despesa' | 'investimento'
+
 export interface Category extends Meta {
   name: string
-  kind: 'receita' | 'despesa'
+  kind: TxKind
+  /** Classificação do método 50/30/20 (só despesas). Sem valor = Desejo, como na planilha. */
+  group?: 'necessidade' | 'desejo'
   monthlyBudgetCents?: number
   system?: boolean
 }
@@ -31,7 +35,7 @@ export interface Card extends Meta {
 }
 
 export interface Transaction extends Meta {
-  kind: 'receita' | 'despesa'
+  kind: TxKind
   /** Sempre positivo. */
   amountCents: number
   /** Data da compra ou do lançamento, YYYY-MM-DD. */
@@ -49,6 +53,10 @@ export interface Transaction extends Meta {
   cardPayment?: { cardId: string; invoiceMonth: string }
   recurrenceId?: string
   note?: string
+  /** Ainda não pago/recebido: `date` é o vencimento. Sem este campo o lançamento está pago. */
+  pending?: true
+  /** Data em que foi pago, quando diferente do vencimento. */
+  paidDate?: string
 }
 
 export type TransactionDraft = Omit<Transaction, keyof Meta>
@@ -60,9 +68,14 @@ export interface Recurrence extends Meta {
   endMonth?: string
 }
 
-export type Collection = 'profiles' | 'accounts' | 'categories' | 'cards' | 'transactions' | 'recurrences'
+/** Preferências da família, sincronizadas (registro único id 'app'). */
+export interface Settings extends Meta {
+  methodId?: string
+}
 
-export const COLLECTIONS: Collection[] = ['profiles', 'accounts', 'categories', 'cards', 'transactions', 'recurrences']
+export type Collection = 'profiles' | 'accounts' | 'categories' | 'cards' | 'transactions' | 'recurrences' | 'settings'
+
+export const COLLECTIONS: Collection[] = ['profiles', 'accounts', 'categories', 'cards', 'transactions', 'recurrences', 'settings']
 
 /** Qualquer registro sincronizado (os campos extras variam por coleção). */
 export type AnyRecord = Meta
@@ -74,5 +87,5 @@ export interface DataDoc {
 
 export const emptyDoc = (): DataDoc => ({
   schemaVersion: 1,
-  records: { profiles: {}, accounts: {}, categories: {}, cards: {}, transactions: {}, recurrences: {} },
+  records: { profiles: {}, accounts: {}, categories: {}, cards: {}, transactions: {}, recurrences: {}, settings: {} },
 })
