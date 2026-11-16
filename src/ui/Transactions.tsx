@@ -75,7 +75,7 @@ export function Transactions() {
             const where = t.cardId ? `Cartão ${name(cards, t.cardId)}` : name(accounts, t.accountId)
             const parcela = t.installment ? `, parcela ${t.installment.n} de ${t.installment.total}` : ''
             const title = `${name(cats, t.categoryId) || 'Sem categoria'}${parcela}${t.note ? ` — ${t.note}` : ''}`
-            const when = st === 'pago'
+            const when = t.cardId ? `Compra ${dateLabel(t.date)}` : st === 'pago'
               ? `${t.kind === 'receita' ? 'Recebido' : 'Pago'} ${dateLabel(t.paidDate ?? t.date)}`
               : `${st === 'atrasado' ? 'Venceu' : 'Vence'} ${dateLabel(t.date)}`
             const sign = t.kind === 'receita' ? '+' : t.kind === 'investimento' ? '→ ' : '−'

@@ -1,6 +1,9 @@
 import { periodSummary, countedIn, type SummaryData } from './period'
 import { paidInvoices, txStatus } from './status'
 import type { TxKind } from './types'
+import { DEFAULT_CATEGORIES } from './defaults'
+
+const ORDER = new Map(DEFAULT_CATEGORIES.map((d, i) => [d.id, i]))
 
 const pad = (n: number) => String(n).padStart(2, '0')
 const monthRange = (year: number, m: number) => {
@@ -18,7 +21,9 @@ export function yearReport(year: number, data: SummaryData, opts: { onlyPaid?: b
   const mk = (label: string, level: ReportRow['level'], values: number[], kind?: TxKind): ReportRow =>
     ({ label, level, kind, values, total: values.reduce((a, b) => a + b, 0) })
 
+  // Ordem da planilha; categorias criadas pela família vêm depois, por nome.
   const cats = data.categories.filter(c => !c.deletedAt && !c.system)
+    .sort((a, b) => (ORDER.get(a.id) ?? 999) - (ORDER.get(b.id) ?? 999) || a.name.localeCompare(b.name, 'pt-BR'))
   const rows: ReportRow[] = []
   const block = (kind: TxKind, title: string) => {
     const tot = sumBy(k => k === kind)

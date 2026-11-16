@@ -46,3 +46,13 @@ test('csv em pt-BR abre certo no Excel', () => {
   expect(csv).toContain('Valor;Descrição')
   expect(csv).toContain('1234,56;"Mercado; feira"')
 })
+
+test('relatório segue a ordem da planilha', () => {
+  const cs: Category[] = [
+    { id: 'cat-lazer', name: 'Lazer e entretenimento', kind: 'despesa', ...meta },
+    { id: 'zz', name: 'Academia', kind: 'despesa', ...meta },
+    { id: 'cat-moradia', name: 'Moradia', kind: 'despesa', ...meta },
+  ]
+  const r = yearReport(2026, { transactions: [], categories: cs, cards: [] }, { today: '2026-11-16' })
+  expect(r.rows.filter(x => x.level === 'item').map(x => x.label)).toEqual(['Moradia', 'Lazer e entretenimento', 'Academia'])
+})

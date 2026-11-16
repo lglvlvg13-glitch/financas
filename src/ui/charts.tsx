@@ -7,7 +7,8 @@ export function BarChart({ title, bars, colors, legend, height = 120 }: {
   title: string; bars: Bar[]; colors: string[]; legend?: string[]; height?: number
 }) {
   const max = Math.max(1, ...bars.flatMap(b => b.values.map(Math.abs)))
-  const many = bars.length > 14
+  // Rótulos espaçados para não se sobreporem: no máximo uns 8.
+  const step = Math.max(1, Math.ceil(bars.length / 8))
   return (
     <figure className="chart" style={{ margin: 0 }}>
       <div role="img" aria-label={title} className="chart-bars" style={{ height }}>
@@ -20,7 +21,7 @@ export function BarChart({ title, bars, colors, legend, height = 120 }: {
         ))}
       </div>
       <div className="chart-labels">
-        {bars.map((b, i) => <span key={i}>{many && i % Math.ceil(bars.length / 10) !== 0 ? '' : b.label}</span>)}
+        {bars.map((b, i) => <span key={i}>{i % step === 0 ? b.label : ''}</span>)}
       </div>
       {legend && (
         <figcaption className="chart-legend">
