@@ -7,9 +7,9 @@ import { UndoProvider } from './UndoToast'
 import { Pages, type Page } from './pages'
 
 const NAV: Array<[Page, string]> = [
+  ['painel', 'Painel'],
   ['resumo', 'Resumo'],
   ['lancamentos', 'Lançamentos'],
-  ['painel', 'Painel'],
   ['cartoes', 'Cartões'],
   ['mais', 'Mais'],
 ]
@@ -19,7 +19,7 @@ const UNDER_MAIS: Page[] = ['contas', 'relatorio', 'ajustes', 'categorias', 'rec
 
 function Shell() {
   const { device } = useApp()
-  const [page, setPage] = useState<Page>('resumo')
+  const [page, setPage] = useState<Page>('painel')
 
   if (!device) return null
   if (!device.dataFileId) return <Welcome />

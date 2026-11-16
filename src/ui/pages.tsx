@@ -25,13 +25,14 @@ function More({ go }: { go: (p: Page) => void }) {
 export function Pages({ page, go }: { page: Exclude<Page, 'ajustes'>; go: (p: Page) => void }) {
   switch (page) {
     case 'lancamentos': return <Transactions />
-    case 'painel': return <Dashboard />
+    case 'painel': return <Dashboard go={go} />
     case 'cartoes': return <Cards />
     case 'mais': return <More go={go} />
     case 'contas': return <Accounts />
     case 'relatorio': return <YearReport />
     case 'categorias': return <Categories />
     case 'recorrentes': return <Recurrences />
-    default: return <Summary go={go} />
+    case 'resumo': return <Summary go={go} />
+    default: return <Dashboard go={go} />
   }
 }

@@ -19,10 +19,18 @@ export function useGenerateRecurrences(month: string) {
   }, [repo, me, recs, month])
 }
 
+/** Filtro pedido por outra tela (ex.: Painel → "contas atrasadas"); vale só para a próxima abertura. */
+let requestedStatus: TxStatus | undefined
+export function openWithStatus(st: TxStatus) { requestedStatus = st }
+
 export function Transactions() {
   const [month, setMonth] = useMonth()
   const [filter, setFilter] = useState<ProfileId | 'todos'>('todos')
-  const [statusFilter, setStatusFilter] = useState<TxStatus | 'todos'>('todos')
+  const [statusFilter, setStatusFilter] = useState<TxStatus | 'todos'>(() => {
+    const st = requestedStatus ?? 'todos'
+    requestedStatus = undefined
+    return st
+  })
   const { repo, me } = useApp()
   const [editing, setEditing] = useState<Transaction | 'novo'>()
   const txs = useList<Transaction>('transactions')
@@ -35,11 +43,13 @@ export function Transactions() {
   const name = (list: Array<{ id: string; name: string }>, id?: string) => list.find(x => x.id === id)?.name ?? ''
   const now = today()
   const ctx = { paid: paidInvoices(txs ?? [], cards), cards, today: now }
-  const inMonth = (txs ?? [])
-    .filter(t => competenceMonth(t) === month && (filter === 'todos' || t.profileId === filter))
-    .map(t => ({ t, st: txStatus(t, ctx) }))
-  const count = (st: TxStatus) => inMonth.filter(r => r.st === st && !r.t.cardPayment).length
-  const rows = inMonth
+  const all = (txs ?? []).filter(t => filter === 'todos' || t.profileId === filter).map(t => ({ t, st: txStatus(t, ctx) }))
+  const inMonth = all.filter(r => competenceMonth(r.t) === month)
+  const overdueAll = all.filter(r => r.st === 'atrasado' && !r.t.cardPayment)
+  // "Atrasados" mostra as contas atrasadas de qualquer mês: é a lista do que falta pagar.
+  const allOverdue = statusFilter === 'atrasado'
+  const count = (st: TxStatus) => st === 'atrasado' ? overdueAll.length : inMonth.filter(r => r.st === st && !r.t.cardPayment).length
+  const rows = (allOverdue ? overdueAll : inMonth)
     .filter(r => statusFilter === 'todos' || (r.st === statusFilter && !r.t.cardPayment))
     .sort((a, b) => b.t.date.localeCompare(a.t.date) || b.t.updatedAt - a.t.updatedAt)
 
@@ -53,7 +63,7 @@ export function Transactions() {
   return (
     <>
       <h1>Lançamentos</h1>
-      <MonthNav month={month} setMonth={setMonth} />
+      {allOverdue ? <p className="muted" style={{ margin: '4px 0 16px' }}>Todas as contas atrasadas, de qualquer mês.</p> : <MonthNav month={month} setMonth={setMonth} />}
       <div className="seg" role="group" aria-label="Filtrar por pessoa" style={{ marginBottom: 16 }}>
         <button aria-pressed={filter === 'todos'} onClick={() => setFilter('todos')}>Todos</button>
         <button aria-pressed={filter === 'u1'} onClick={() => setFilter('u1')}>{names.u1}</button>
@@ -67,7 +77,7 @@ export function Transactions() {
       </div>
 
       {txs && rows.length === 0 && (
-        <div className="list"><p className="empty">Nada lançado em {monthLabel(month)}. Toque em + para lançar.</p></div>
+        <div className="list"><p className="empty">{allOverdue ? 'Nenhuma conta atrasada.' : <>Nada lançado em {monthLabel(month)}. Toque em + para lançar.</>}</p></div>
       )}
       {rows.length > 0 && (
         <ul className="list">

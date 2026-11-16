@@ -22,9 +22,15 @@ async function seed(repo: Awaited<ReturnType<typeof setup>>['repo']) {
 
 const group = (name: string) => screen.getByRole('group', { name })
 
+/** O app abre no Painel; os testes do Resumo entram nele primeiro. */
+async function openResumo(s: Awaited<ReturnType<typeof setup>>) {
+  await s.user.click(await screen.findByRole('button', { name: 'Resumo' }))
+}
+
 test('mês: entradas, saídas, investido e os dois saldos', async () => {
   const s = await setup({ ready: true })
   await seed(s.repo)
+  await openResumo(s)
   expect(await within(await screen.findByRole('group', { name: 'Saldo final' })).findByText('R$ 5.000,00')).toBeInTheDocument()
   expect(within(group('Entradas')).getByText('R$ 8.000,00')).toBeInTheDocument()
   expect(within(group('Saídas')).getByText('R$ 2.000,00')).toBeInTheDocument()
@@ -35,6 +41,7 @@ test('mês: entradas, saídas, investido e os dois saldos', async () => {
 test('trocar para Ano inclui o mês anterior; Só pagos tira o previsto', async () => {
   const s = await setup({ ready: true })
   await seed(s.repo)
+  await openResumo(s)
   await within(await screen.findByRole('group', { name: 'Saídas' })).findByText('R$ 2.000,00')
   if (M.slice(5) !== '01') {
     await s.user.click(within(screen.getByRole('group', { name: 'Período' })).getByRole('button', { name: 'Ano' }))
@@ -48,6 +55,7 @@ test('trocar para Ano inclui o mês anterior; Só pagos tira o previsto', async 
 test('dia e semana mostram só o que cai no período', async () => {
   const s = await setup({ ready: true })
   await seed(s.repo)
+  await openResumo(s)
   await within(await screen.findByRole('group', { name: 'Saídas' })).findByText('R$ 2.000,00')
   await s.user.click(within(screen.getByRole('group', { name: 'Período' })).getByRole('button', { name: 'Dia' }))
   expect(await within(group('Entradas')).findByText('R$ 8.000,00')).toBeInTheDocument()
@@ -58,6 +66,7 @@ test('dia e semana mostram só o que cai no período', async () => {
 test('variação do método fica salva e muda o previsto', async () => {
   const s = await setup({ ready: true })
   await seed(s.repo)
+  await openResumo(s)
   const sel = await screen.findByLabelText('Variação do método')
   await s.user.selectOptions(sel, 'm2')
   await waitFor(async () => expect((await s.repo.get<Settings>('settings', 'app'))?.methodId).toBe('m2'))
@@ -70,6 +79,7 @@ test('categoria acima do orçamento fica destacada', async () => {
   const cat = await s.repo.get<Category>('categories', 'cat-alimentacao')
   await s.repo.put<Category>('categories', { ...cat!, monthlyBudgetCents: 100000 }, 'u1')
   await seed(s.repo)
+  await openResumo(s)
   await s.user.click(await screen.findByRole('button', { name: 'Mês' }))
   const row = await screen.findByRole('listitem', { name: 'Alimentação' })
   expect(await within(row).findByText('Acima do orçamento em R$ 200,00')).toBeInTheDocument()
@@ -78,6 +88,7 @@ test('categoria acima do orçamento fica destacada', async () => {
 test('baixar planilha gera um arquivo .csv', async () => {
   const s = await setup({ ready: true })
   await seed(s.repo)
+  await openResumo(s)
   const created: Blob[] = []
   URL.createObjectURL = ((b: Blob) => { created.push(b); return 'blob:x' }) as typeof URL.createObjectURL
   URL.revokeObjectURL = () => {}
@@ -88,19 +99,38 @@ test('baixar planilha gera um arquivo .csv', async () => {
   expect(text).toContain('Alimentação')
 })
 
-test('Painel mostra atrasados e pagos do ano', async () => {
+test('o app abre no Painel e a navegação começa por ele', async () => {
   const s = await setup({ ready: true })
   await seed(s.repo)
-  await s.repo.put<Transaction>('transactions', { kind: 'despesa', amountCents: 41200, date: '2020-01-01' > D ? D : `${D.slice(0, 4)}-01-02`, categoryId: 'cat-seguros', profileId: 'u1', accountId: 'a1', pending: true }, 'u1')
-  await s.user.click(await screen.findByRole('button', { name: 'Painel' }))
-  const card = await screen.findByRole('group', { name: 'Despesas atrasadas' })
-  expect(await within(card).findByText(/R\$ /)).toBeInTheDocument()
-  expect(screen.getByRole('img', { name: /Entradas mês a mês/ })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: 'Painel' })).toBeInTheDocument()
+  const nav = screen.getByRole('navigation', { name: 'Seções' })
+  expect(within(nav).getAllByRole('button').map(b => b.textContent)).toEqual(['Painel', 'Resumo', 'Lançamentos', 'Cartões', 'Mais'])
+})
+
+test('Painel: saldo do ano, para onde foi o dinheiro e gráfico mês a mês', async () => {
+  const s = await setup({ ready: true })
+  await seed(s.repo)
+  const hero = await screen.findByRole('group', { name: /Saldo final de \d{4}/ })
+  expect(within(hero).getByRole('img', { name: /Para onde foi o dinheiro/ })).toBeInTheDocument()
+  expect(screen.getByRole('group', { name: /mês a mês/ })).toBeInTheDocument()
+  // Tocar num mês mostra os números dele.
+  await s.user.click(screen.getByRole('button', { name: new RegExp(`^${['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][Number(M.slice(5)) - 1]}`) }))
+  expect(within(screen.getByRole('group', { name: 'Mês escolhido' })).getByText('R$ 8.000,00')).toBeInTheDocument()
+})
+
+test('Painel: aviso de atrasadas leva à lista já filtrada', async () => {
+  const s = await setup({ ready: true })
+  await seed(s.repo)
+  await s.repo.put<Transaction>('transactions', { kind: 'despesa', amountCents: 41200, date: `${D.slice(0, 4)}-01-02`, categoryId: 'cat-seguros', profileId: 'u1', accountId: 'a1', pending: true, note: 'IPVA' }, 'u1')
+  await s.user.click(await screen.findByRole('button', { name: /1 conta atrasada/ }))
+  expect(await screen.findByRole('heading', { name: 'Lançamentos' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /Atrasados/ })).toHaveAttribute('aria-pressed', 'true')
 })
 
 test('Relatório do ano tem as linhas da planilha', async () => {
   const s = await setup({ ready: true })
   await seed(s.repo)
+  await openResumo(s)
   await s.user.click(await screen.findByRole('button', { name: 'Mais' }))
   await s.user.click(await screen.findByRole('button', { name: 'Relatório do ano' }))
   const table = await screen.findByRole('table')
