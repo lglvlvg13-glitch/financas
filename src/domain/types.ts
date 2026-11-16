@@ -57,6 +57,9 @@ export interface Transaction extends Meta {
   pending?: true
   /** Data em que foi pago, quando diferente do vencimento. */
   paidDate?: string
+  /** Necessidade ou Desejo só deste lançamento (ex.: mercado x restaurante, ambos em Alimentação).
+   *  Sem valor, vale o da categoria. */
+  group?: 'necessidade' | 'desejo'
 }
 
 export type TransactionDraft = Omit<Transaction, keyof Meta>

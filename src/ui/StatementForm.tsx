@@ -16,6 +16,7 @@ export function StatementForm({ card, month, onClose }: { card: Card; month: str
   const [note, setNote] = useState('')
   const [amount, setAmount] = useState('')
   const [categoryId, setCategoryId] = useState('')
+  const [groupOverride, setGroupOverride] = useState<'necessidade' | 'desejo'>()
   const [who, setWho] = useState<ProfileId>(me)
   const [split, setSplit] = useState(false)
   const [current, setCurrent] = useState('1')
@@ -26,6 +27,8 @@ export function StatementForm({ card, month, onClose }: { card: Card; month: str
   const [added, setAdded] = useState<string[]>([])
 
   const s = invoiceSummary(card, month, txs)
+  const catGroup = categories.find(c => c.id === categoryId)?.group ?? 'desejo'
+  const effectiveGroup = groupOverride ?? catGroup
   const items = s.items.slice().sort((a, b) => b.updatedAt - a.updatedAt)
 
   const setCurrentAndDate = (v: string) => {
@@ -45,12 +48,13 @@ export function StatementForm({ card, month, onClose }: { card: Card; month: str
     }
     setError(undefined)
     const drafts = statementPurchase(
-      { kind: 'despesa', amountCents: cents, date, categoryId, profileId: who, cardId: card.id, note: note.trim() },
+      { kind: 'despesa', amountCents: cents, date, categoryId, profileId: who, cardId: card.id, note: note.trim(),
+        ...(groupOverride && groupOverride !== catGroup ? { group: groupOverride } : {}) },
       { invoiceMonth: month, current: k, total: n, groupId: crypto.randomUUID() })
     for (const d of drafts) await repo.put<Transaction>('transactions', d, me)
     setAdded([...added, drafts[0].note!])
     if (close) return onClose()
-    setNote(''); setAmount(''); setSplit(false); setCurrent('1'); setTotal(''); setDateTouched(false)
+    setNote(''); setAmount(''); setSplit(false); setGroupOverride(undefined); setCurrent('1'); setTotal(''); setDateTouched(false)
     setDate(defaultPurchaseDate(month, card, today(), 1))
     document.getElementById('st-desc')?.focus()
   }
@@ -75,12 +79,21 @@ export function StatementForm({ card, month, onClose }: { card: Card; month: str
       </div>
       <div className="field">
         <label htmlFor="st-cat">Categoria</label>
-        <select id="st-cat" value={categoryId} onChange={e => setCategoryId(e.target.value)}>
+        <select id="st-cat" value={categoryId} onChange={e => { setCategoryId(e.target.value); setGroupOverride(undefined) }}>
           <option value="">Escolha…</option>
           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         {EXAMPLES[categoryId] && <span className="hint">O que entra aqui: {EXAMPLES[categoryId].join(', ')}.</span>}
       </div>
+      {categoryId && (
+        <div className="field">
+          <span className="lbl">No método 50/30/20</span>
+          <div className="seg" role="group" aria-label="No método 50/30/20">
+            <button aria-pressed={effectiveGroup === 'necessidade'} onClick={() => setGroupOverride('necessidade')}>Necessidade</button>
+            <button aria-pressed={effectiveGroup === 'desejo'} onClick={() => setGroupOverride('desejo')}>Desejo</button>
+          </div>
+        </div>
+      )}
       <div className="field">
         <span className="lbl">Compra</span>
         <div className="seg" role="group" aria-label="Compra">

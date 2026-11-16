@@ -93,3 +93,28 @@ test('conta do tipo Pix', async () => {
   const dlg = await screen.findByRole('dialog')
   expect(within(within(dlg).getByLabelText('Tipo')).getByRole('option', { name: 'Pix' })).toBeInTheDocument()
 })
+
+test('alimentação pode ser lançada como Desejo (restaurante) sem mudar a categoria', async () => {
+  const s = await ready()
+  const dlg = await openNew(s.user)
+  await s.user.type(within(dlg).getByLabelText('Valor (R$)'), '120')
+  await s.user.selectOptions(within(dlg).getByLabelText('Categoria'), 'cat-alimentacao')
+  await s.user.selectOptions(within(dlg).getByLabelText('Onde'), 'a:a1')
+  const metodo = within(dlg).getByRole('group', { name: 'No método 50/30/20' })
+  expect(within(metodo).getByRole('button', { name: 'Necessidade' })).toHaveAttribute('aria-pressed', 'true')
+  await s.user.click(within(metodo).getByRole('button', { name: 'Desejo' }))
+  await s.user.click(within(dlg).getByRole('button', { name: 'Salvar' }))
+  await waitFor(async () => expect((await s.repo.list<Transaction>('transactions'))[0]?.group).toBe('desejo'))
+  expect((await s.repo.list<Transaction>('transactions'))[0].categoryId).toBe('cat-alimentacao')
+})
+
+test('sem mudar, o lançamento segue a categoria (não grava grupo próprio)', async () => {
+  const s = await ready()
+  const dlg = await openNew(s.user)
+  await s.user.type(within(dlg).getByLabelText('Valor (R$)'), '300')
+  await s.user.selectOptions(within(dlg).getByLabelText('Categoria'), 'cat-alimentacao')
+  await s.user.selectOptions(within(dlg).getByLabelText('Onde'), 'a:a1')
+  await s.user.click(within(dlg).getByRole('button', { name: 'Salvar' }))
+  await waitFor(async () => expect(await s.repo.list('transactions')).toHaveLength(1))
+  expect((await s.repo.list<Transaction>('transactions'))[0].group).toBeUndefined()
+})

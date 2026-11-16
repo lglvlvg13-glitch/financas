@@ -36,6 +36,8 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
   const [months, setMonths] = useState('')
   const [isPaid, setIsPaid] = useState(!initial?.pending)
   const [paidDate, setPaidDate] = useState(initial?.paidDate ?? '')
+  /** Necessidade/Desejo só deste lançamento; undefined = segue a categoria. */
+  const [groupOverride, setGroupOverride] = useState(initial?.group)
   const [note, setNote] = useState(initial?.note ?? '')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -71,21 +73,30 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
       kind, amountCents: cents!, date, categoryId, profileId: initial?.profileId ?? me,
       ...(accountId ? { accountId } : {}), ...(cardId ? { cardId } : {}), ...(note.trim() ? { note: note.trim() } : {}),
     }
+    function withGroup(t: Transaction): Transaction {
+      const out = { ...t }
+      delete out.group
+      return Object.assign(out, groupFields)
+    }
     // Situação (só fora do cartão: compra no cartão segue a fatura).
+    const catGroup = categories.find(c => c.id === categoryId)?.group ?? 'desejo'
+    const groupFields = kind === 'despesa' && groupOverride && groupOverride !== catGroup ? { group: groupOverride } : {}
+    Object.assign(base, groupFields)
     const paidFields = cardId || isPayment ? {}
       : isPaid ? (paidDate && paidDate !== date ? { paidDate } : {})
       : { pending: true as const }
 
     if (initial && isParcela && scope === 'todas' && midStream) {
-      for (const t of group) await repo.put<Transaction>('transactions', { ...t, amountCents: cents!, categoryId, note: note.trim() || undefined }, me)
+      for (const t of group) await repo.put<Transaction>('transactions', withGroup({ ...t, amountCents: cents!, categoryId, note: note.trim() || undefined }), me)
     } else if (initial && isParcela && scope === 'uma') {
-      await repo.put<Transaction>('transactions', { ...initial, amountCents: cents!, categoryId, note: note.trim() || undefined }, me)
+      await repo.put<Transaction>('transactions', withGroup({ ...initial, amountCents: cents!, categoryId, note: note.trim() || undefined }), me)
     } else if (initial && isParcela && scope === 'todas') {
       for (const t of group) await repo.remove('transactions', t.id, me)
       await createPurchase(base, initial.installment!.groupId)
     } else if (initial) {
       const next: Transaction = { ...initial, ...base }
       delete next.pending; delete next.paidDate
+      if (!base.group) delete next.group
       Object.assign(next, paidFields)
       if (!cardId) { delete next.cardId; delete next.invoiceMonth }
       if (!accountId) delete next.accountId
@@ -128,9 +139,8 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
 
   const catOptions = categories.filter(c => c.kind === kind && (!c.system || c.id === initial?.categoryId))
   const chosen = categories.find(c => c.id === categoryId)
-  const hint = chosen && (EXAMPLES[chosen.id] || chosen.kind === 'despesa')
-    ? `${EXAMPLES[chosen.id] ? `O que entra aqui: ${EXAMPLES[chosen.id].join(', ')}. ` : ''}${chosen.kind === 'despesa' && !chosen.system ? (chosen.group === 'necessidade' ? 'Conta como Necessidade no método.' : 'Conta como Desejo no método.') : ''}`
-    : undefined
+  const hint = chosen && EXAMPLES[chosen.id] ? `O que entra aqui: ${EXAMPLES[chosen.id].join(', ')}.` : undefined
+  const effectiveGroup = groupOverride ?? chosen?.group ?? 'desejo'
 
   return (
     <Dialog title={initial ? 'Editar lançamento' : 'Novo lançamento'} onClose={onClose}>
@@ -170,13 +180,24 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
 
       <div className="field">
         <label htmlFor="tx-cat">Categoria</label>
-        <select id="tx-cat" value={categoryId} disabled={isPayment} onChange={e => setCategoryId(e.target.value)}>
+        <select id="tx-cat" value={categoryId} disabled={isPayment} onChange={e => { setCategoryId(e.target.value); setGroupOverride(undefined) }}>
           <option value="">Escolha…</option>
           {catOptions.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         {errors.category && <span className="err">{errors.category}</span>}
         {hint && <span className="hint">{hint}</span>}
       </div>
+
+      {kind === 'despesa' && chosen && !chosen.system && (
+        <div className="field">
+          <span className="lbl">No método 50/30/20</span>
+          <div className="seg" role="group" aria-label="No método 50/30/20">
+            <button aria-pressed={effectiveGroup === 'necessidade'} onClick={() => setGroupOverride('necessidade')}>Necessidade</button>
+            <button aria-pressed={effectiveGroup === 'desejo'} onClick={() => setGroupOverride('desejo')}>Desejo</button>
+          </div>
+          <span className="hint">Ex.: mercado é Necessidade; restaurante ou delivery pode ser Desejo, mesmo sendo Alimentação.</span>
+        </div>
+      )}
 
       <div className="field">
         <label htmlFor="tx-onde">Onde</label>

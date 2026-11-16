@@ -159,8 +159,8 @@ test('excluir conta com lançamentos mostra a quantidade', async () => {
   const confirm = await screen.findByRole('alertdialog')
   expect(within(confirm).getByText(/Esta conta tem 2 lançamentos/)).toBeInTheDocument()
   await s.user.click(within(confirm).getByRole('button', { name: 'Excluir também os 2 lançamentos' }))
-  await waitFor(async () => expect(await s.repo.list('transactions')).toHaveLength(0))
-  expect(await s.repo.list('accounts')).toHaveLength(0)
+  await waitFor(async () => expect(await s.repo.list('accounts')).toHaveLength(0))
+  expect(await s.repo.list('transactions')).toHaveLength(0)
 })
 
 test('categoria do sistema não pode ser excluída', async () => {

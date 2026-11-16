@@ -96,3 +96,16 @@ test('categorias padrão = planilha: 15 despesas, Lazer/Vestuário/Família = de
   expect(desp.filter(c => c.group === 'desejo').map(c => c.name)).toEqual(['Lazer e entretenimento', 'Vestuário', 'Família e social'])
   expect(DEFAULT_CATEGORIES.filter(c => c.kind === 'investimento')).toHaveLength(4)
 })
+
+test('cada lançamento pode ser Necessidade ou Desejo, independente da categoria', () => {
+  const base = { transactions: [] as Transaction[], categories: cats, cards: [] }
+  const rows = [
+    tx({ kind: 'receita', amountCents: 1000000, categoryId: 'cat-sal' }),
+    tx({ amountCents: 80000, categoryId: 'cat-moradia' }),                       // necessidade (da categoria)
+    tx({ amountCents: 20000, categoryId: 'cat-moradia', group: 'desejo' }),      // ex.: decoração
+    tx({ amountCents: 15000, categoryId: 'cat-lazer', group: 'necessidade' }),   // vira necessidade
+  ]
+  const s = periodSummary({ from: '2026-11-01', to: '2026-11-30' }, { ...base, transactions: rows }, { today: '2026-11-16' })
+  expect(s.method.buckets[0].realCents).toBe(95000)
+  expect(s.method.buckets[1].realCents).toBe(20000)
+})

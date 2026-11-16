@@ -102,7 +102,7 @@ export function periodSummary(range: Range, data: SummaryData, opts: SummaryOpts
   // 50/30/20: despesas de categorias "necessidade" x o resto (sem grupo = desejo, como na planilha).
   const group = new Map(cats.map(c => [c.id, c.group]))
   let needReal = 0
-  for (const { t } of rows) if (t.kind === 'despesa' && group.get(t.categoryId) === 'necessidade') needReal += t.amountCents
+  for (const { t } of rows) if (t.kind === 'despesa' && (t.group ?? group.get(t.categoryId)) === 'necessidade') needReal += t.amountCents
   const m = methodById(opts.methodId)
   const plan = (pct: number) => Math.round(totals.incomeCents * pct / 100)
   const buckets = [
