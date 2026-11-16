@@ -5,18 +5,38 @@ import App from './ui/App'
 import { Repo } from './data/db'
 import { DriveClient } from './google/drive'
 import { requestToken } from './google/auth'
+import type { AppDeps } from './ui/context'
 
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
+const demo = import.meta.env.VITE_DEMO === '1'
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App deps={{
+async function start() {
+  let deps: AppDeps
+  if (demo) {
+    const { DemoDrive, seedDemo } = await import('./demo')
+    const repo = new Repo('financas-familia-demo')
+    await seedDemo(repo)
+    const drive = new DemoDrive()
+    deps = {
+      repo,
+      requestToken: async () => ({ accessToken: 'demo', expiresAt: Date.now() + 365 * 86_400_000 }),
+      makeDrive: () => drive,
+    }
+  } else {
+    deps = {
       repo: new Repo(),
       requestToken: () => {
         if (!clientId) return Promise.reject(new Error('Falta configurar o VITE_GOOGLE_CLIENT_ID (veja o README)'))
         return requestToken(clientId)
       },
       makeDrive: getToken => new DriveClient(getToken),
-    }} />
-  </StrictMode>,
-)
+    }
+  }
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      {demo && <div className="demo-bar" role="note">Demonstração com dados de exemplo. Nada vai para o Google Drive; o que você lançar fica só neste navegador.</div>}
+      <App deps={deps} />
+    </StrictMode>,
+  )
+}
+void start()

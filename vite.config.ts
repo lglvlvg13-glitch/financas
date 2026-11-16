@@ -4,12 +4,14 @@ import { defineConfig } from 'vitest/config'
 
 // No GitHub Pages o app fica em /<nome-do-repositório>/; o workflow passa BASE_PATH.
 const base = process.env.BASE_PATH ?? '/'
+const demo = process.env.VITE_DEMO === '1'
 
 export default defineConfig({
   base,
   plugins: [
     react(),
     VitePWA({
+      disable: demo,
       registerType: 'autoUpdate',
       includeAssets: ['icon-192.png', 'icon-512.png'],
       manifest: {
