@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useList, useLive } from './context'
 import { openWithStatus } from './Transactions'
+import { openCardsAt } from './Cards'
+import { invoiceSummary } from '../domain/invoice'
 import type { Page } from './pages'
 import { formatBRL } from '../domain/money'
 import { monthOf, today } from '../domain/dates'
@@ -58,12 +60,13 @@ export function Dashboard({ go }: { go: (p: Page) => void }) {
   const overdue = txs.filter(t => !t.deletedAt && !t.cardPayment && txStatus(t, ctx) === 'atrasado')
   // Contas soltas contam uma a uma; compras de cartão viram uma "fatura atrasada" por cartão e mês.
   const overdueOut = overdue.filter(t => t.kind !== 'receita' && !t.cardId)
-  const lateInvoices = [...overdue.filter(t => t.cardId && t.invoiceMonth).reduce((m, t) => {
-    const k = `${t.cardId}|${t.invoiceMonth}`
-    const cur = m.get(k) ?? { cardId: t.cardId!, month: t.invoiceMonth!, cents: 0 }
-    cur.cents += t.amountCents
-    return m.set(k, cur)
-  }, new Map<string, { cardId: string; month: string; cents: number }>()).values()].sort((a, b) => a.month.localeCompare(b.month))
+  const lateKeys = new Set(overdue.filter(t => t.cardId && t.invoiceMonth).map(t => `${t.cardId}|${t.invoiceMonth}`))
+  const lateInvoices = [...lateKeys].map(k => {
+    const [cardId, month] = k.split('|')
+    const card = cards.find(c => c.id === cardId)
+    const inv = card ? invoiceSummary(card, month, txs) : undefined
+    return { cardId, month, cents: inv ? Math.max(0, inv.totalCents - inv.paidCents) : 0 }
+  }).filter(f => f.cents > 0).sort((a, b) => a.month.localeCompare(b.month))
   const overdueIn = overdue.filter(t => t.kind === 'receita')
   const sum = (list: Transaction[]) => list.reduce((s, t) => s + t.amountCents, 0)
 
@@ -144,7 +147,7 @@ export function Dashboard({ go }: { go: (p: Page) => void }) {
           </button>
         )}
         {lateInvoices.map(f => (
-          <button key={`${f.cardId}|${f.month}`} className="alert out" onClick={() => go('cartoes')}>
+          <button key={`${f.cardId}|${f.month}`} className="alert out" onClick={() => { openCardsAt(f.month); go('cartoes') }}>
             <b>Fatura {cards.find(c => c.id === f.cardId)?.name ?? 'do cartão'} de {MONTHS_FULL[Number(f.month.slice(5)) - 1]} atrasada</b>
             <span className="num">{formatBRL(f.cents)}</span>
             <em>Ver e pagar a fatura</em>

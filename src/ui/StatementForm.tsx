@@ -26,6 +26,7 @@ export function StatementForm({ card, month, onClose }: { card: Card; month: str
   const [dateTouched, setDateTouched] = useState(false)
   const [error, setError] = useState<string>()
   const [added, setAdded] = useState<string[]>([])
+  const [saving, setSaving] = useState(false)
 
   const s = invoiceSummary(card, month, txs)
   const chosen = categories.find(c => c.id === categoryId)
@@ -50,12 +51,14 @@ export function StatementForm({ card, month, onClose }: { card: Card; month: str
       return setError('Parcela inválida: use, por exemplo, 3 de 10.')
     }
     setError(undefined)
+    if (saving) return
+    setSaving(true)
     const drafts = statementPurchase(
       { kind: 'despesa', amountCents: cents, date, categoryId, profileId: who, cardId: card.id, note: note.trim(),
         ...(item ? { item } : {}),
         ...(groupOverride && groupOverride !== catGroup ? { group: groupOverride } : {}) },
       { invoiceMonth: month, current: k, total: n, groupId: crypto.randomUUID() })
-    for (const d of drafts) await repo.put<Transaction>('transactions', d, me)
+    try { for (const d of drafts) await repo.put<Transaction>('transactions', d, me) } finally { setSaving(false) }
     setAdded([...added, drafts[0].note!])
     if (close) return onClose()
     setNote(''); setAmount(''); setSplit(false); setGroupOverride(undefined); setItem(''); setCurrent('1'); setTotal(''); setDateTouched(false)
@@ -135,8 +138,8 @@ export function StatementForm({ card, month, onClose }: { card: Card; month: str
       </div>
       {error && <p className="err saida" role="alert">{error}</p>}
       <div className="btns">
-        <button className="btn" onClick={() => save(false)}>Salvar e lançar outra</button>
-        <button className="btn sec" onClick={() => save(true)}>Salvar e fechar</button>
+        <button className="btn" disabled={saving} onClick={() => save(false)}>Salvar e lançar outra</button>
+        <button className="btn sec" disabled={saving} onClick={() => save(true)}>Salvar e fechar</button>
         <button className="btn sec" onClick={onClose}>Fechar</button>
       </div>
 

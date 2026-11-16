@@ -11,8 +11,12 @@ import type { Account, Card, Category, Transaction } from '../domain/types'
 
 const isPaid = (s: { totalCents: number; paidCents: number }) => s.totalCents > 0 && s.paidCents >= s.totalCents
 
+/** Mês pedido por outra tela (ex.: Painel → fatura atrasada); vale só para a próxima abertura. */
+let requestedMonth: string | undefined
+export function openCardsAt(month: string) { requestedMonth = month }
+
 export function Cards() {
-  const [month, setMonth] = useState(currentMonth())
+  const [month, setMonth] = useState(() => { const m = requestedMonth ?? currentMonth(); requestedMonth = undefined; return m })
   const cards = useList<Card>('cards')
   const txs = useList<Transaction>('transactions') ?? []
   const [editing, setEditing] = useState<Card | 'novo'>()

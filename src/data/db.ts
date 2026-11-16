@@ -1,7 +1,7 @@
 import Dexie, { type Table } from 'dexie'
 import { mergeDocs } from '../domain/merge'
-import { defaultCategories, defaultProfiles, LEGACY_DEFAULT_IDS } from '../domain/defaults'
-import { COLLECTIONS, emptyDoc, type AnyRecord, type Collection, type DataDoc, type Meta, type ProfileId, type Recurrence, type Transaction } from '../domain/types'
+import { defaultCategories, defaultProfiles, DEFAULTS_VERSION } from '../domain/defaults'
+import { COLLECTIONS, emptyDoc, type AnyRecord, type Collection, type DataDoc, type Category, type Meta, type ProfileId, type Recurrence, type Transaction } from '../domain/types'
 
 export interface DeviceConfig { profileId?: ProfileId; dataFileId?: string; folderId?: string }
 
@@ -204,22 +204,19 @@ export class Repo {
     for (const p of defaultProfiles(now)) {
       if (!(await this.db.coll('profiles').get(p.id))) await this.write('profiles', { ...p, updatedBy: by })
     }
-    // Padrão nunca editado (carimbo 0) recebe a versão nova; o que o usuário editou fica como está.
-    for (const cat of defaultCategories(now)) {
-      const cur = await this.db.coll('categories').get(cat.id)
+    // Padrão nunca editado (carimbo ≤ DEFAULTS_VERSION) recebe a versão nova; o que o usuário editou fica como está.
+    for (const cat of defaultCategories(DEFAULTS_VERSION)) {
+      const cur = await this.db.coll('categories').get(cat.id) as Category | undefined
       if (!cur) await this.write('categories', { ...cat, updatedBy: by })
-      else if (cur.updatedAt === 0 && !cur.deletedAt && !sameContent(cur, cat)) {
-        await this.write('categories', { ...cat, updatedBy: by })
+      else if (cur.deletedAt) continue
+      else if (cur.updatedAt <= DEFAULTS_VERSION) {
+        if (!sameContent(cur, cat)) await this.write('categories', { ...cat, updatedBy: by })
+      } else if (cat.kind === 'despesa' && !cur.group && !cur.items && (cat.group || cat.items)) {
+        // Editada pela família antes desta versão: mantém o que ela mudou e ganha classificação e itens.
+        await this.put<Category>('categories', { ...cur, ...(cat.group ? { group: cat.group } : {}), ...(cat.items ? { items: cat.items } : {}) }, by)
       }
     }
-    // Padrões da versão anterior que ninguém usa nem editou saem da lista.
-    const used = new Set<string>()
-    for (const t of (await this.db.coll('transactions').toArray()) as unknown as Transaction[]) if (!t.deletedAt) used.add(t.categoryId)
-    for (const r of (await this.db.coll('recurrences').toArray()) as unknown as Recurrence[]) if (!r.deletedAt) used.add(r.template.categoryId)
-    for (const id of LEGACY_DEFAULT_IDS) {
-      const cur = await this.db.coll('categories').get(id)
-      if (cur && cur.updatedAt === 0 && !cur.deletedAt && !used.has(id)) await this.setDeleted('categories', id, by, true)
-    }
+    // Categorias padrão antigas não são apagadas: o outro aparelho pode ter lançamentos nelas ainda não sincronizados.
     this.changed()
   }
 

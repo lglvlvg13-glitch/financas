@@ -1,14 +1,15 @@
-import { addMonths, clampDay, monthOf } from './dates'
+import { addMonths, clampDay, monthOf, today as todayDate } from './dates'
 import type { Account, Category, ProfileId, Recurrence, Transaction, TransactionDraft } from './types'
 
-/** Lançamentos recorrentes que ainda faltam gerar no mês. */
-export function dueRecurrences(recs: Recurrence[], month: string, existing: Transaction[]): TransactionDraft[] {
+/** Lançamentos recorrentes que faltam no mês. Do mês atual em diante chegam como Previsto;
+ *  meses passados (abertos pela primeira vez agora) entram como pagos, para não encher de "Atrasado". */
+export function dueRecurrences(recs: Recurrence[], month: string, existing: Transaction[], today = todayDate()): TransactionDraft[] {
   const out: TransactionDraft[] = []
   for (const r of recs) {
     if (r.deletedAt || month < r.startMonth || (r.endMonth && month > r.endMonth)) continue
     // Qualquer lançamento do mês com esta recorrência (mesmo excluído) já conta: excluir foi decisão do usuário.
     if (existing.some(t => t.recurrenceId === r.id && monthOf(t.date) === month)) continue
-    out.push({ ...r.template, date: clampDay(month, r.dayOfMonth), recurrenceId: r.id, pending: true })
+    out.push({ ...r.template, date: clampDay(month, r.dayOfMonth), recurrenceId: r.id, ...(month >= monthOf(today) ? { pending: true as const } : {}) })
   }
   return out
 }

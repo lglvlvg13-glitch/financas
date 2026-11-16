@@ -148,8 +148,12 @@ test('Painel agrupa compras de cartão atrasadas numa fatura só', async () => {
     await s.repo.put<Transaction>('transactions', { kind: 'despesa', amountCents: v, date: `${y}-01-02`, categoryId: 'cat-lazer', profileId: 'u1', cardId: 'k1', invoiceMonth: `${y}-01` }, 'u1')
   }
   await waitFor(() => expect(screen.getByRole('button', { name: /Fatura Nubank/ })).toHaveTextContent('R$ 60,00'))
-  const alert = screen.getByRole('button', { name: /Fatura Nubank/ })
+  void screen.getByRole('button', { name: /Fatura Nubank/ })
   expect(screen.queryByRole('button', { name: /3 contas atrasadas/ })).toBeNull()
-  await s.user.click(alert)
+  // Pagamento parcial: o aviso mostra só o que falta.
+  await s.repo.put<Transaction>('transactions', { kind: 'despesa', amountCents: 1000, date: `${y}-01-09`, categoryId: 'cat-pagamento-fatura', profileId: 'u1', accountId: 'a1', cardPayment: { cardId: 'k1', invoiceMonth: `${y}-01` } }, 'u1')
+  await waitFor(() => expect(screen.getByRole('button', { name: /Fatura Nubank/ })).toHaveTextContent('R$ 50,00'))
+  await s.user.click(screen.getByRole('button', { name: /Fatura Nubank/ }))
   expect(await screen.findByRole('heading', { name: 'Cartões' })).toBeInTheDocument()
+  expect(screen.getByText(/Janeiro de/)).toBeInTheDocument()
 })

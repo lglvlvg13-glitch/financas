@@ -49,7 +49,7 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
   const isParcela = !!initial?.installment
   // Compra lançada pelo extrato a partir da parcela k > 1: as parcelas anteriores não existem no app,
   // então "todas" só muda valor, categoria e observação de cada uma, sem recriar.
-  const midStream = isParcela && Math.min(...group.map(t => t.installment!.n)) > 1
+  const midStream = isParcela && group.length > 0 && Math.min(...group.map(t => t.installment!.n)) > 1
   const lockStructure = isParcela && (scope === 'uma' || midStream)   // parcela isolada: só valor, categoria e observação
   const groupTotal = group.reduce((s, t) => s + t.amountCents, 0)
 

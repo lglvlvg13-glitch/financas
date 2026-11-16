@@ -46,8 +46,9 @@ export const DEFAULT_CATEGORIES: Def[] = [
   { id: 'cat-inv-corretora', name: 'Corretora', kind: 'investimento' },
 ]
 
-/** Padrões da versão anterior que saem quando ninguém os usa nem os editou. */
-export const LEGACY_DEFAULT_IDS = ['cat-salario', 'cat-assinaturas', 'cat-outros']
+/** Carimbo dos padrões desta versão. Maior que o da Fase 1 (0), para a migração vencer a junção com o Drive,
+ *  e muito menor que qualquer edição real (Date.now()). Carimbo ≤ isto = padrão nunca editado. */
+export const DEFAULTS_VERSION = 1
 
 /** Nomes dos itens de cada categoria padrão (usado nas dicas). */
 export const EXAMPLES: Record<string, string[]> = Object.fromEntries(

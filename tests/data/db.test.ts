@@ -185,10 +185,20 @@ test('padrão antigo nunca editado ganha o nome novo; editado pelo usuário fica
   await repo.importDoc(doc)
   await repo.put<Transaction>('transactions', { ...txBase, categoryId: 'cat-assinaturas', accountId: 'a1' }, 'u1')
   await repo.ensureDefaults('u1')
-  expect((await repo.get<Category>('categories', 'cat-saude'))).toMatchObject({ name: 'Saúde e bem-estar', group: 'necessidade', updatedAt: 0 })
-  expect((await repo.get<Category>('categories', 'cat-lazer'))?.name).toBe('Diversão')
-  expect(await repo.get('categories', 'cat-outros')).toBeUndefined()
+  expect((await repo.get<Category>('categories', 'cat-saude'))).toMatchObject({ name: 'Saúde e bem-estar', group: 'necessidade' })
+  // Editada na Fase 1: o nome fica, mas ganha a classificação e os itens.
+  expect((await repo.get<Category>('categories', 'cat-lazer'))).toMatchObject({ name: 'Diversão', group: 'desejo' })
+  expect((await repo.get<Category>('categories', 'cat-lazer'))?.items?.length).toBeGreaterThan(0)
+  // Categorias antigas não são apagadas (o outro aparelho pode estar usando).
+  expect((await repo.get<Category>('categories', 'cat-outros'))?.name).toBe('Outros')
   expect((await repo.get<Category>('categories', 'cat-assinaturas'))?.name).toBe('Assinaturas')
+  // A próxima sincronização traz de volta o documento antigo do Drive: a migração não pode ser desfeita.
+  await repo.importDoc(doc)
+  expect((await repo.get<Category>('categories', 'cat-saude'))?.name).toBe('Saúde e bem-estar')
+  expect(await repo.isDirty()).toBe(true)
+  await repo.markClean()
+  await repo.ensureDefaults('u1')
+  expect(await repo.isDirty()).toBe(false)
 })
 
 test('preferências (método) sincronizam como coleção', async () => {

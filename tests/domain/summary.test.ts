@@ -85,3 +85,8 @@ test('saldo da conta', () => {
   ]
   expect(accountBalanceCents(acc, txs)).toBe(120000)
 })
+
+test('recorrente de mês passado nasce pago; do mês atual em diante, previsto', () => {
+  expect(dueRecurrences([rec()], '2026-10', [], '2026-11-16')[0].pending).toBeUndefined()
+  expect(dueRecurrences([rec()], '2026-11', [], '2026-11-16')[0].pending).toBe(true)
+})
