@@ -28,12 +28,15 @@ export function Dialog({ title, onClose, children, role = 'dialog' }: {
   title: string; onClose: () => void; children: ReactNode; role?: 'dialog' | 'alertdialog'
 }) {
   const ref = useRef<HTMLDivElement>(null)
+  const close = useRef(onClose)
+  close.current = onClose
+  // Foco só ao abrir: se dados chegarem da sincronização enquanto a pessoa digita, o foco não pula.
   useEffect(() => {
     ref.current?.querySelector<HTMLElement>('input, select, button')?.focus()
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') close.current() }
     window.addEventListener('keydown', esc)
     return () => window.removeEventListener('keydown', esc)
-  }, [onClose])
+  }, [])
   return (
     <div className="overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="dialog" role={role} aria-modal="true" aria-label={title} ref={ref}>
