@@ -3,7 +3,8 @@ import { useApp, useList } from './context'
 import { Confirm, Dialog } from './common'
 import { useUndo } from './UndoToast'
 import { formatBRL, parseBRL } from '../domain/money'
-import { dayOf, monthOf, today } from '../domain/dates'
+import { addMonths, dayOf, monthOf, today } from '../domain/dates'
+import { EXAMPLES } from '../domain/defaults'
 import { buildInstallments, invoiceMonthFor } from '../domain/invoice'
 import type { Account, Card, Category, Recurrence, Transaction, TransactionDraft } from '../domain/types'
 
@@ -32,6 +33,9 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
   const [where, setWhere] = useState(initial?.cardId ? `c:${initial.cardId}` : initial?.accountId ? `a:${initial.accountId}` : '')
   const [count, setCount] = useState(initial?.installment?.total ?? 1)
   const [repeat, setRepeat] = useState(false)
+  const [months, setMonths] = useState('')
+  const [isPaid, setIsPaid] = useState(!initial?.pending)
+  const [paidDate, setPaidDate] = useState(initial?.paidDate ?? '')
   const [note, setNote] = useState(initial?.note ?? '')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -55,6 +59,8 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
     if (!categoryId) errs.category = 'Escolha uma categoria'
     if (!where) errs.where = 'Escolha a conta ou o cartão'
     if (!date) errs.date = 'Escolha a data'
+    const nMonths = months.trim() ? Number(months) : undefined
+    if (repeat && nMonths !== undefined && !(Number.isInteger(nMonths) && nMonths >= 1 && nMonths <= 600)) errs.months = 'Digite um número de meses de 1 a 600, ou deixe em branco'
     setErrors(errs)
     if (Object.keys(errs).length) return
 
@@ -62,6 +68,10 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
       kind, amountCents: cents!, date, categoryId, profileId: initial?.profileId ?? me,
       ...(accountId ? { accountId } : {}), ...(cardId ? { cardId } : {}), ...(note.trim() ? { note: note.trim() } : {}),
     }
+    // Situação (só fora do cartão: compra no cartão segue a fatura).
+    const paidFields = cardId || isPayment ? {}
+      : isPaid ? (paidDate && paidDate !== date ? { paidDate } : {})
+      : { pending: true as const }
 
     if (initial && isParcela && scope === 'uma') {
       await repo.put<Transaction>('transactions', { ...initial, amountCents: cents!, categoryId, note: note.trim() || undefined }, me)
@@ -70,6 +80,8 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
       await createPurchase(base, initial.installment!.groupId)
     } else if (initial) {
       const next: Transaction = { ...initial, ...base }
+      delete next.pending; delete next.paidDate
+      Object.assign(next, paidFields)
       if (!cardId) { delete next.cardId; delete next.invoiceMonth }
       if (!accountId) delete next.accountId
       if (!next.note) delete next.note
@@ -82,10 +94,13 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
       if (repeat) {
         const { date: _d, ...template } = base
         void _d
-        const r = await repo.put<Recurrence>('recurrences', { template, dayOfMonth: dayOf(date), startMonth: monthOf(date) }, me)
+        const r = await repo.put<Recurrence>('recurrences', {
+          template, dayOfMonth: dayOf(date), startMonth: monthOf(date),
+          ...(nMonths ? { endMonth: addMonths(monthOf(date), nMonths - 1) } : {}),
+        }, me)
         recurrenceId = r.id
       }
-      await repo.put<Transaction>('transactions', { ...base, ...(recurrenceId ? { recurrenceId } : {}) }, me)
+      await repo.put<Transaction>('transactions', { ...base, ...paidFields, ...(recurrenceId ? { recurrenceId } : {}) }, me)
     }
     onClose()
   }
@@ -107,6 +122,10 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
   }
 
   const catOptions = categories.filter(c => c.kind === kind && (!c.system || c.id === initial?.categoryId))
+  const chosen = categories.find(c => c.id === categoryId)
+  const hint = chosen && (EXAMPLES[chosen.id] || chosen.kind === 'despesa')
+    ? `${EXAMPLES[chosen.id] ? `O que entra aqui: ${EXAMPLES[chosen.id].join(', ')}. ` : ''}${chosen.kind === 'despesa' && !chosen.system ? (chosen.group === 'necessidade' ? 'Conta como Necessidade no método.' : 'Conta como Desejo no método.') : ''}`
+    : undefined
 
   return (
     <Dialog title={initial ? 'Editar lançamento' : 'Novo lançamento'} onClose={onClose}>
@@ -128,6 +147,7 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
           <div className="seg" role="group" aria-label="Tipo">
             <button aria-pressed={kind === 'despesa'} onClick={() => { setKind('despesa'); setCategoryId('') }}>Despesa</button>
             <button aria-pressed={kind === 'receita'} onClick={() => { setKind('receita'); setCategoryId(''); if (cardId) setWhere('') }}>Receita</button>
+            <button aria-pressed={kind === 'investimento'} onClick={() => { setKind('investimento'); setCategoryId(''); if (cardId) setWhere('') }}>Investimento</button>
           </div>
         </div>
       )}
@@ -139,7 +159,7 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
       </div>
 
       <div className="field">
-        <label htmlFor="tx-data">{cardId ? 'Data da compra' : 'Data'}</label>
+        <label htmlFor="tx-data">{cardId ? 'Data da compra' : isPayment ? 'Data' : 'Vence em'}</label>
         <input id="tx-data" type="date" value={date} disabled={lockStructure} onChange={e => setDate(e.target.value)} />
       </div>
 
@@ -150,6 +170,7 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
           {catOptions.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         {errors.category && <span className="err">{errors.category}</span>}
+        {hint && <span className="hint">{hint}</span>}
       </div>
 
       <div className="field">
@@ -176,11 +197,38 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
         </div>
       )}
 
+      {!card && !isPayment && (
+        <>
+          <label className="check">
+            <input type="checkbox" checked={isPaid} onChange={e => setIsPaid(e.target.checked)} />
+            {kind === 'receita' ? 'Já foi recebido' : 'Já está pago'}
+          </label>
+          {isPaid ? (
+            <div className="field">
+              <label htmlFor="tx-pago">{kind === 'receita' ? 'Recebido em' : 'Pago em'}</label>
+              <input id="tx-pago" type="date" value={paidDate || date} onChange={e => setPaidDate(e.target.value)} />
+            </div>
+          ) : (
+            <p className="hint" style={{ marginTop: -6 }}>Fica <strong>Previsto</strong> até o vencimento e <strong>Atrasado</strong> depois.</p>
+          )}
+        </>
+      )}
+
       {!initial && !card && (
-        <label style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14 }}>
-          <input type="checkbox" checked={repeat} onChange={e => setRepeat(e.target.checked)} />
-          Repetir todo mês
-        </label>
+        <>
+          <label className="check">
+            <input type="checkbox" checked={repeat} onChange={e => setRepeat(e.target.checked)} />
+            Repetir todo mês
+          </label>
+          {repeat && (
+            <div className="field">
+              <label htmlFor="tx-meses">Por quantos meses</label>
+              <input id="tx-meses" inputMode="numeric" placeholder="Sem fim" value={months} onChange={e => setMonths(e.target.value)} />
+              {errors.months ? <span className="err">{errors.months}</span>
+                : <span className="hint">Os próximos meses chegam como Previsto, no dia {dayOf(date) || '–'}. Em branco, repete sem fim.</span>}
+            </div>
+          )}
+        </>
       )}
 
       <div className="field">

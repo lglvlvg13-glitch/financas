@@ -4,6 +4,7 @@ import { Confirm, Dialog, plural } from './common'
 import { useUndo } from './UndoToast'
 import { formatBRL, parseBRL } from '../domain/money'
 import type { Category } from '../domain/types'
+import { EXAMPLES } from '../domain/defaults'
 
 export function Categories() {
   const cats = useList<Category>('categories') ?? []
@@ -18,7 +19,8 @@ export function Categories() {
             <button className="row" onClick={() => setEditing(c)}>
               <strong>{c.name}</strong>
               <span className="val num muted">{c.monthlyBudgetCents ? formatBRL(c.monthlyBudgetCents) : ''}</span>
-              <span className="sub">{c.system ? 'Usada pelo app nos pagamentos de fatura' : c.monthlyBudgetCents ? 'Orçamento mensal' : 'Sem orçamento'}</span>
+              <span className="sub">{c.system ? 'Usada pelo app nos pagamentos de fatura'
+                : [kind === 'despesa' ? (c.group === 'necessidade' ? 'Necessidade' : 'Desejo') : '', c.monthlyBudgetCents ? 'orçamento mensal' : ''].filter(Boolean).join(', ') || ' '}</span>
             </button>
           </li>
         ))}
@@ -30,9 +32,10 @@ export function Categories() {
   return (
     <>
       <h1>Categorias e orçamento</h1>
-      <p className="muted">O orçamento mensal aparece no Resumo como uma barra que fica vermelha quando passa do limite.</p>
+      <p className="muted">O orçamento mensal aparece no Resumo, proporcional ao período escolhido. Necessidade ou Desejo define em que parte do método 50/30/20 a despesa entra.</p>
       {section('despesa', 'Despesas')}
       {section('receita', 'Receitas')}
+      {section('investimento', 'Investimentos')}
       {editing && (
         <CategoryForm
           initial={typeof editing === 'string' ? undefined : editing}
@@ -51,6 +54,7 @@ function CategoryForm({ initial, kind, others, onClose }: {
   const { repo, me } = useApp()
   const undo = useUndo()
   const [name, setName] = useState(initial?.name ?? '')
+  const [group, setGroup] = useState<'necessidade' | 'desejo'>(initial?.group ?? 'desejo')
   const [budget, setBudget] = useState(initial?.monthlyBudgetCents ? formatBRL(initial.monthlyBudgetCents).replace('R$ ', '') : '')
   const [error, setError] = useState<string>()
   const [linked, setLinked] = useState<number>()
@@ -62,6 +66,8 @@ function CategoryForm({ initial, kind, others, onClose }: {
     const cents = budget.trim() ? parseBRL(budget) : undefined
     if (cents === null) return setError('Orçamento inválido.')
     const rec: Partial<Category> = { ...initial, name: name.trim(), kind }
+    if (kind === 'despesa') rec.group = group
+    else delete rec.group
     if (cents) rec.monthlyBudgetCents = cents
     else delete rec.monthlyBudgetCents
     await repo.put<Category>('categories', rec as Category, me)
@@ -80,6 +86,16 @@ function CategoryForm({ initial, kind, others, onClose }: {
         <label htmlFor="cat-nome">Nome</label>
         <input id="cat-nome" value={name} disabled={initial?.system} onChange={e => setName(e.target.value)} />
       </div>
+      {kind === 'despesa' && !initial?.system && (
+        <div className="field">
+          <span className="lbl">No método 50/30/20</span>
+          <div className="seg" role="group" aria-label="No método 50/30/20">
+            <button aria-pressed={group === 'necessidade'} onClick={() => setGroup('necessidade')}>Necessidade</button>
+            <button aria-pressed={group === 'desejo'} onClick={() => setGroup('desejo')}>Desejo</button>
+          </div>
+        </div>
+      )}
+      {initial && EXAMPLES[initial.id] && <p className="hint">O que entra aqui: {EXAMPLES[initial.id].join(', ')}.</p>}
       {kind === 'despesa' && !initial?.system && (
         <div className="field">
           <label htmlFor="cat-orc">Orçamento mensal (R$, opcional)</label>

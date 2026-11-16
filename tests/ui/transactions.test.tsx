@@ -61,10 +61,10 @@ test('editar lançamento altera valor e categoria', async () => {
   const s = await setup({ ready: true })
   await withAccountAndCard(s.repo)
   const t = await s.repo.put<Transaction>('transactions', {
-    kind: 'despesa', amountCents: 5000, date: D, categoryId: 'cat-outros', profileId: 'u1', accountId: 'a1',
+    kind: 'despesa', amountCents: 5000, date: D, categoryId: 'cat-emergencias', profileId: 'u1', accountId: 'a1',
   }, 'u1')
   await s.user.click(await screen.findByRole('button', { name: 'Lançamentos' }))
-  await s.user.click(await screen.findByRole('button', { name: /Outros/ }))
+  await s.user.click(await screen.findByRole('button', { name: /Emergenciais/ }))
   const dlg = await screen.findByRole('dialog')
   const valor = within(dlg).getByLabelText('Valor (R$)')
   await s.user.clear(valor)
@@ -80,10 +80,10 @@ test('excluir pede confirmação e Desfazer restaura', async () => {
   const s = await setup({ ready: true })
   await withAccountAndCard(s.repo)
   await s.repo.put<Transaction>('transactions', {
-    kind: 'despesa', amountCents: 5000, date: D, categoryId: 'cat-outros', profileId: 'u1', accountId: 'a1',
+    kind: 'despesa', amountCents: 5000, date: D, categoryId: 'cat-emergencias', profileId: 'u1', accountId: 'a1',
   }, 'u1')
   await s.user.click(await screen.findByRole('button', { name: 'Lançamentos' }))
-  await s.user.click(await screen.findByRole('button', { name: /Outros/ }))
+  await s.user.click(await screen.findByRole('button', { name: /Emergenciais/ }))
   await s.user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Excluir' }))
   const confirm = await screen.findByRole('alertdialog')
   expect(within(confirm).getByText('Excluir este lançamento?')).toBeInTheDocument()
@@ -136,6 +136,7 @@ test('encerrar recorrência não gera o mês seguinte', async () => {
     id: 'r1', dayOfMonth: 5, startMonth: '2026-01',
     template: { kind: 'despesa', amountCents: 150000, categoryId: 'cat-moradia', profileId: 'u1', accountId: 'a1', note: 'Aluguel' },
   }, 'u1')
+  await s.user.click(await screen.findByRole('button', { name: 'Mais' }))
   await s.user.click(await screen.findByRole('button', { name: 'Ajustes' }))
   await s.user.click(await screen.findByRole('button', { name: 'Lançamentos recorrentes' }))
   await s.user.click(await screen.findByRole('button', { name: /Aluguel/ }))
@@ -149,6 +150,7 @@ test('excluir conta com lançamentos mostra a quantidade', async () => {
   for (let i = 0; i < 2; i++) {
     await s.repo.put<Transaction>('transactions', { kind: 'despesa', amountCents: 100, date: D, categoryId: 'cat-outros', profileId: 'u1', accountId: 'a1' }, 'u1')
   }
+  await s.user.click(await screen.findByRole('button', { name: 'Mais' }))
   await s.user.click(await screen.findByRole('button', { name: 'Contas' }))
   await s.user.click(await screen.findByRole('button', { name: /Conta Itaú/ }))
   await s.user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Excluir' }))
@@ -161,6 +163,7 @@ test('excluir conta com lançamentos mostra a quantidade', async () => {
 
 test('categoria do sistema não pode ser excluída', async () => {
   const s = await setup({ ready: true })
+  await s.user.click(await screen.findByRole('button', { name: 'Mais' }))
   await s.user.click(await screen.findByRole('button', { name: 'Ajustes' }))
   await s.user.click(await screen.findByRole('button', { name: 'Categorias e orçamento' }))
   await s.user.click(await screen.findByRole('button', { name: /Pagamento de fatura/ }))

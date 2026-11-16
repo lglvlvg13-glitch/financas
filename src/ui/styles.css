@@ -143,3 +143,19 @@ p { margin: 0 0 12px; }
 .compare th[scope='row'] { text-align: left; }
 
 .demo-bar { background: #e3ebf3; color: var(--tinta); font-size: 13px; padding: 8px 16px; text-align: center; }
+
+.hint { font-size: 13px; color: var(--tinta-2); line-height: 1.45; }
+.check { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; min-height: 32px; }
+.check input { width: 20px; height: 20px; }
+.badge { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+.badge.pago { color: #0f5e4a; background: #dcf1ea; }
+.badge.previsto { color: var(--tinta); background: #e3ebf3; }
+.badge.atrasado { color: #8a2e1c; background: #fde8e1; }
+.investe { color: #2f5d9e; }
+.txrow { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 8px; padding-right: 12px; }
+.txrow .row { padding-right: 4px; }
+.txrow .acts { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; padding: 8px 0; }
+.mini { border: 1px solid var(--tinta); background: transparent; color: var(--tinta); border-radius: var(--raio-p); padding: 0 10px; min-height: 36px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.chips button { border: 1px solid var(--linha); background: #fff; color: var(--tinta-2); border-radius: 999px; padding: 0 14px; min-height: 40px; font-weight: 600; cursor: pointer; }
+.chips button[aria-pressed='true'] { background: var(--tinta); border-color: var(--tinta); color: #fff; }

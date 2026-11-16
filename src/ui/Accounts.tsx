@@ -6,7 +6,7 @@ import { formatBRL, parseBRL } from '../domain/money'
 import { accountBalanceCents } from '../domain/summary'
 import type { Account, Transaction } from '../domain/types'
 
-const KIND_LABEL: Record<Account['kind'], string> = { corrente: 'Conta corrente', poupanca: 'Poupança', carteira: 'Dinheiro / carteira' }
+const KIND_LABEL: Record<Account['kind'], string> = { corrente: 'Conta corrente', poupanca: 'Poupança', carteira: 'Dinheiro / carteira', pix: 'Pix' }
 
 export function Accounts() {
   const accounts = useList<Account>('accounts')

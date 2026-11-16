@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useApp, useProfiles } from './context'
-import type { Profile, ProfileId } from '../domain/types'
+import type { Category, Profile, ProfileId } from '../domain/types'
 import { SYNC_TEXT } from './SyncBanner'
 
 export function Settings({ go }: { go: (page: 'categorias' | 'recorrentes') => void }) {
@@ -16,7 +16,13 @@ export function Settings({ go }: { go: (page: 'categorias' | 'recorrentes') => v
     if (bad) { setError('Digite um nome com até 30 letras.'); return }
     setError(undefined)
     for (const id of ['u1', 'u2'] as ProfileId[]) {
-      if (draft[id].trim() !== names[id]) await repo.put<Profile>('profiles', { id, name: draft[id].trim() }, me)
+      if (draft[id].trim() === names[id]) continue
+      await repo.put<Profile>('profiles', { id, name: draft[id].trim() }, me)
+      // A categoria de salário acompanha o nome, enquanto tiver o nome padrão.
+      const sal = await repo.get<Category>('categories', `cat-salario-${id}`)
+      if (sal && (sal.name === `Salário ${names[id]}` || sal.name === `Salário Usuário ${id.slice(1)}`)) {
+        await repo.put<Category>('categories', { ...sal, name: `Salário ${draft[id].trim()}` }, me)
+      }
     }
     setSaved(true)
   }

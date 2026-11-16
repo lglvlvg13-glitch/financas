@@ -13,6 +13,7 @@ test('mostra Quem é você depois do login e grava a escolha', async () => {
 
 test('renomear perfil atualiza o nome mostrado', async () => {
   const { user } = await setup({ ready: true })
+  await user.click(await screen.findByRole('button', { name: 'Mais' }))
   await user.click(await screen.findByRole('button', { name: 'Ajustes' }))
   const field = await screen.findByLabelText('Nome do perfil 1')
   await user.clear(field)
@@ -23,6 +24,7 @@ test('renomear perfil atualiza o nome mostrado', async () => {
 
 test('nome vazio não é aceito', async () => {
   const { user } = await setup({ ready: true })
+  await user.click(await screen.findByRole('button', { name: 'Mais' }))
   await user.click(await screen.findByRole('button', { name: 'Ajustes' }))
   const field = await screen.findByLabelText('Nome do perfil 2')
   await user.clear(field)

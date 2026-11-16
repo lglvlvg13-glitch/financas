@@ -9,10 +9,13 @@ import { Pages, type Page } from './pages'
 const NAV: Array<[Page, string]> = [
   ['resumo', 'Resumo'],
   ['lancamentos', 'Lançamentos'],
+  ['painel', 'Painel'],
   ['cartoes', 'Cartões'],
-  ['contas', 'Contas'],
-  ['ajustes', 'Ajustes'],
+  ['mais', 'Mais'],
 ]
+
+/** Telas que ficam dentro de "Mais". */
+const UNDER_MAIS: Page[] = ['contas', 'relatorio', 'ajustes', 'categorias', 'recorrentes']
 
 function Shell() {
   const { device } = useApp()
@@ -22,7 +25,7 @@ function Shell() {
   if (!device.dataFileId) return <Welcome />
   if (!device.profileId) return <WhoAreYou />
 
-  const navPage: Page = page === 'categorias' || page === 'recorrentes' ? 'ajustes' : page
+  const navPage: Page = UNDER_MAIS.includes(page) ? 'mais' : page
   return (
     <div className="shell">
       <nav className="nav" aria-label="Seções">
