@@ -131,7 +131,7 @@ export function Transactions({ go }: { go?: (p: 'importar') => void } = {}) {
         <button aria-pressed={filter === 'u1'} onClick={() => setFilter('u1')}>{names.u1}</button>
         <button aria-pressed={filter === 'u2'} onClick={() => setFilter('u2')}>{names.u2}</button>
       </div>
-      <div className="chips" role="group" aria-label="Filtrar por situação">
+      <div className="chips status-chips" role="group" aria-label="Filtrar por situação">
         <button aria-pressed={statusFilter === 'todos'} onClick={() => setStatusFilter('todos')}>Todos</button>
         <button aria-pressed={statusFilter === 'atrasado'} onClick={() => setStatusFilter('atrasado')}>Atrasados ({count('atrasado')})</button>
         <button aria-pressed={statusFilter === 'previsto'} onClick={() => setStatusFilter('previsto')}>Previstos ({count('previsto')})</button>
