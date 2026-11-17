@@ -27,7 +27,8 @@ jobs:
       - run: npm test
       - run: npm run build
         env:
-          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          # O Client ID do Google é público (aparece no site); não é segredo.
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID || '737655399509-pnhc5jqua7kbjjk1sba1rir74f8o23dt.apps.googleusercontent.com' }}
           BASE_PATH: /${{ github.event.repository.name }}/
       - uses: actions/upload-pages-artifact@v3
         with:
