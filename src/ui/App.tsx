@@ -6,6 +6,7 @@ import { SyncBanner } from './SyncBanner'
 import { UndoProvider } from './UndoToast'
 import { Pages, type Page } from './pages'
 import { LockScreen, useLockState } from './Lock'
+import { useDueNotifications } from './Reminders'
 
 const NAV: Array<[Page, string]> = [
   ['painel', 'Painel'],
@@ -22,6 +23,7 @@ function Shell() {
   const { device } = useApp()
   const [page, setPage] = useState<Page>('painel')
   const [locked, unlock] = useLockState()
+  useDueNotifications()
 
   if (!device) return null
   if (!device.dataFileId) return <Welcome />

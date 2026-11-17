@@ -3,6 +3,8 @@ import { useList, useLive } from './context'
 import { openWithStatus } from './Transactions'
 import { openCardsAt } from './Cards'
 import { invoiceSummary } from '../domain/invoice'
+import { budgetAlerts } from '../domain/alerts'
+import { UpcomingSection } from './Reminders'
 import type { Page } from './pages'
 import { formatBRL } from '../domain/money'
 import { monthOf, today } from '../domain/dates'
@@ -160,8 +162,17 @@ export function Dashboard({ go }: { go: (p: Page) => void }) {
             <em>Ver lançamentos</em>
           </button>
         )}
+        {isThisYear && budgetAlerts(data, monthOf(now), now).map(b => (
+          <button key={b.categoryId} className="alert in" onClick={() => go('resumo')}>
+            <b>{b.pct > 100 ? `${b.name} passou do orçamento: ${b.pct}%` : `${b.name} já usou ${b.pct}% do orçamento`}</b>
+            <span className="num">{formatBRL(b.spentCents)} de {formatBRL(b.budgetCents)}</span>
+            <em>Ver no Resumo</em>
+          </button>
+        ))}
         {overdue.length === 0 && <p className="alert ok">Nenhuma conta atrasada.</p>}
       </div>
+
+      {isThisYear && <UpcomingSection />}
 
       <div className="kpis">
         <div role="group" aria-label="Receitas pagas no ano"><span>Receitas pagas no ano</span><strong className="num entrada">{formatBRL(d.paidIncomeCents)}</strong></div>

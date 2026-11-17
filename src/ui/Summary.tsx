@@ -218,6 +218,7 @@ export function Summary({ go }: { go: (p: 'lancamentos' | 'cartoes') => void }) 
           <ul className="list">
             {s.byCategory.filter(c => c.kind === 'despesa').map(c => {
               const over = c.budgetCents !== undefined && c.spentCents > c.budgetCents
+              const near = !over && c.budgetCents !== undefined && c.spentCents >= c.budgetCents * 0.8
               const pct = c.budgetCents ? Math.min(100, (c.spentCents / c.budgetCents) * 100) : 0
               const name = catName(c.categoryId)
               return (
@@ -225,9 +226,9 @@ export function Summary({ go }: { go: (p: 'lancamentos' | 'cartoes') => void }) 
                   <div className="b-head"><strong>{name}</strong><span className="num" style={{ fontWeight: 700 }}>{formatBRL(c.spentCents)}</span></div>
                   {c.budgetCents !== undefined && (
                     <>
-                      <div className={`bar ${over ? 'over' : ''}`} aria-hidden="true"><span style={{ width: `${pct}%` }} /></div>
-                      <div className={`num ${over ? 'saida' : 'muted'}`} style={{ fontSize: 13, marginTop: 4 }}>
-                        {over ? `Acima do orçamento em ${formatBRL(c.spentCents - c.budgetCents)}` : `Restam ${formatBRL(c.budgetCents - c.spentCents)} de ${formatBRL(c.budgetCents)}`}
+                      <div className={`bar ${over ? 'over' : near ? 'near' : ''}`} aria-hidden="true"><span style={{ width: `${pct}%` }} /></div>
+                      <div className={`num ${over ? 'saida' : near ? 'aviso-txt' : 'muted'}`} style={{ fontSize: 13, marginTop: 4 }}>
+                        {over ? `Acima do orçamento em ${formatBRL(c.spentCents - c.budgetCents)}` : `${near ? `${Math.round(pct)}% usado — ` : ''}Restam ${formatBRL(c.budgetCents - c.spentCents)} de ${formatBRL(c.budgetCents)}`}
                       </div>
                     </>
                   )}

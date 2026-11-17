@@ -12,6 +12,8 @@ export interface DeviceConfig {
   lock?: PinLock | null
   /** Tema da tela. */
   theme?: 'auto' | 'claro' | 'escuro'
+  /** Vencimentos já avisados neste aparelho ("dia|id"), para não repetir. */
+  notified?: string[]
 }
 
 type Linkable = 'accounts' | 'cards' | 'categories'
