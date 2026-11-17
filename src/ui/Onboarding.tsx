@@ -19,6 +19,7 @@ export function Welcome() {
           <button className="btn" onClick={go} disabled={busy}>{busy ? 'Entrando…' : 'Entrar com Google'}</button>
         </div>
         {error && <p className="saida" role="alert">{error}. Tente de novo.</p>}
+        <p className="muted small"><a href="./sobre.html">Sobre o app</a> · <a href="./privacidade.html">Política de Privacidade</a></p>
       </div>
     </main>
   )
