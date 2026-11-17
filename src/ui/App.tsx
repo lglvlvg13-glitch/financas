@@ -25,7 +25,7 @@ function Shell() {
   if (!device.dataFileId) return <Welcome />
   if (!device.profileId) return <WhoAreYou />
 
-  const navPage: Page = UNDER_MAIS.includes(page) ? 'mais' : page
+  const navPage: Page = UNDER_MAIS.includes(page) ? 'mais' : page === 'importar' ? 'lancamentos' : page
   return (
     <div className="shell">
       <nav className="nav" aria-label="Seções">

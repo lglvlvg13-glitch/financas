@@ -281,3 +281,6 @@ p { margin: 0 0 12px; }
 .items-edit .x { border: 0; background: none; font-size: 20px; color: var(--tinta-2); width: 36px; height: 36px; cursor: pointer; border-radius: 50%; }
 .add-item { display: flex; gap: 8px; margin-top: 8px; }
 .add-item input { flex: 1; border: 1px solid #b7c4c3; border-radius: var(--raio-p); padding: 8px 10px; min-height: 40px; }
+.import-list li { padding: 12px 16px; }
+.import-list li.off { opacity: .5; }
+.imp-desc { min-width: 0; overflow-wrap: anywhere; }

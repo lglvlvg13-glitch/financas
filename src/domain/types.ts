@@ -64,6 +64,10 @@ export interface Transaction extends Meta {
   group?: 'necessidade' | 'desejo'
   /** Item da categoria escolhido (ex.: "Restaurantes e delivery"). */
   item?: string
+  /** Identidade da linha do extrato de onde veio (importação), para não importar duas vezes. */
+  importKey?: string
+  /** Comprovante (foto/PDF) guardado no Drive. */
+  receipt?: { fileId: string; name: string; mime: string }
 }
 
 export type TransactionDraft = Omit<Transaction, keyof Meta>

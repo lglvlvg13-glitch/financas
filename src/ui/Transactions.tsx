@@ -23,7 +23,7 @@ export function useGenerateRecurrences(month: string) {
 let requestedStatus: TxStatus | undefined
 export function openWithStatus(st: TxStatus) { requestedStatus = st }
 
-export function Transactions() {
+export function Transactions({ go }: { go?: (p: 'importar') => void } = {}) {
   const [month, setMonth] = useMonth()
   const [filter, setFilter] = useState<ProfileId | 'todos'>('todos')
   const [statusFilter, setStatusFilter] = useState<TxStatus | 'todos'>(() => {
@@ -62,7 +62,10 @@ export function Transactions() {
 
   return (
     <>
-      <h1>Lançamentos</h1>
+      <div className="title-row">
+        <h1>Lançamentos</h1>
+        {go && <button className="mini" onClick={() => go('importar')}>Importar extrato</button>}
+      </div>
       {allOverdue ? <p className="muted" style={{ margin: '4px 0 16px' }}>Todas as contas atrasadas, de qualquer mês.</p> : <MonthNav month={month} setMonth={setMonth} />}
       <div className="seg" role="group" aria-label="Filtrar por pessoa" style={{ marginBottom: 16 }}>
         <button aria-pressed={filter === 'todos'} onClick={() => setFilter('todos')}>Todos</button>

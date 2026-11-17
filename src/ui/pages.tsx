@@ -6,8 +6,9 @@ import { Summary } from './Summary'
 import { Transactions } from './Transactions'
 import { Dashboard } from './Dashboard'
 import { YearReport } from './YearReport'
+import { Import } from './Import'
 
-export type Page = 'resumo' | 'lancamentos' | 'painel' | 'cartoes' | 'mais' | 'contas' | 'relatorio' | 'ajustes' | 'categorias' | 'recorrentes'
+export type Page = 'importar' | 'resumo' | 'lancamentos' | 'painel' | 'cartoes' | 'mais' | 'contas' | 'relatorio' | 'ajustes' | 'categorias' | 'recorrentes'
 
 function More({ go }: { go: (p: Page) => void }) {
   return (
@@ -24,7 +25,8 @@ function More({ go }: { go: (p: Page) => void }) {
 
 export function Pages({ page, go }: { page: Exclude<Page, 'ajustes'>; go: (p: Page) => void }) {
   switch (page) {
-    case 'lancamentos': return <Transactions />
+    case 'lancamentos': return <Transactions go={go} />
+    case 'importar': return <Import onDone={() => go('lancamentos')} />
     case 'painel': return <Dashboard go={go} />
     case 'cartoes': return <Cards />
     case 'mais': return <More go={go} />
