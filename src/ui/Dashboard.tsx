@@ -5,6 +5,7 @@ import { openCardsAt } from './Cards'
 import { invoiceSummary } from '../domain/invoice'
 import { budgetAlerts } from '../domain/alerts'
 import { UpcomingSection } from './Reminders'
+import { CatIcon } from './Icons'
 import type { Page } from './pages'
 import { formatBRL } from '../domain/money'
 import { monthOf, today } from '../domain/dates'
@@ -247,6 +248,8 @@ export function Dashboard({ go }: { go: (p: Page) => void }) {
               const k = cat(c.categoryId)
               return (
                 <li key={c.categoryId}>
+                  <CatIcon category={k} size={38} />
+                  <div style={{ minWidth: 0 }}>
                   <div className="b-head">
                     <span><b>{k?.name ?? 'Sem categoria'}</b> {(() => {
                       const need = Math.round(((needShare.get(c.categoryId) ?? 0) / c.spentCents) * 100)
@@ -257,6 +260,7 @@ export function Dashboard({ go }: { go: (p: Page) => void }) {
                     <span className="num" style={{ fontWeight: 700 }}>{formatBRL(c.spentCents)}</span>
                   </div>
                   <div className="topbar" aria-hidden="true"><span style={{ width: `${(c.spentCents / topMax) * 100}%` }} /></div>
+                  </div>
                 </li>
               )
             })}

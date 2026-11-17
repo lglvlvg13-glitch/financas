@@ -3,6 +3,7 @@ import { useApp, useList } from './context'
 import { Confirm, currentMonth, dateLabel, Dialog, MonthNav, plural } from './common'
 import { useUndo } from './UndoToast'
 import { StatementForm } from './StatementForm'
+import { CatIcon } from './Icons'
 import { formatBRL, parseBRL } from '../domain/money'
 import { addMonths, today } from '../domain/dates'
 import { invoiceMonthFor, invoiceSummary, limitUsedCents } from '../domain/invoice'
@@ -54,40 +55,56 @@ function InvoicePanel({ card, month, txs, onEdit, onPay, onEnter }: {
   const remaining = Math.max(0, s.totalCents - s.paidCents)
   const catName = (id: string) => cats.find(c => c.id === id)?.name ?? ''
 
+  const avail = Math.max(0, card.limitCents - used)
+  const status = paid ? 'Paga' : s.totalCents === 0 ? 'Sem compras' : s.paidCents > 0 ? 'Paga em parte' : 'Em aberto'
   return (
-    <section className="panel" aria-label={card.name} style={{ marginBottom: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
-        <h2 style={{ margin: 0 }}>{card.name}</h2>
-        <span className={paid ? 'entrada' : 'muted'} style={{ fontWeight: 700 }}>
-          {paid ? 'Paga' : s.totalCents === 0 ? 'Sem compras' : s.paidCents > 0 ? 'Paga em parte' : 'Em aberto'}
-        </span>
+    <section className="card-panel" aria-label={card.name}>
+      <div className="card-face" style={{ background: faceColor(card.id) }}>
+        <div className="cf-top">
+          <h2 className="cf-name">{card.name}</h2>
+          <span className={`cf-status ${paid ? 'pago' : ''}`}>{status}</span>
+        </div>
+        <span className="chip" aria-hidden="true" />
+        <p className="num total cf-total" style={{ margin: 0 }}>{formatBRL(s.totalCents)}</p>
+        <div className="cf-meta"><span>Vence em {dateLabel(s.dueDate)}</span><span>Fecha dia {card.closingDay}</span></div>
       </div>
-      <p className="num total" style={{ fontSize: 28, fontWeight: 800, margin: '8px 0 0' }}>{formatBRL(s.totalCents)}</p>
-      <p className="muted" style={{ marginBottom: 8 }}>Vence em {dateLabel(s.dueDate)}</p>
-      <p className="muted num" style={{ fontSize: 14 }}>
-        Limite disponível: {formatBRL(Math.max(0, card.limitCents - used))} de {formatBRL(card.limitCents)}
-      </p>
-      {s.items.length > 0 && (
-        <details>
-          <summary style={{ cursor: 'pointer', fontWeight: 600, minHeight: 36 }}>{plural(s.items.length, 'compra', 'compras')} nesta fatura</summary>
-          <ul className="list" style={{ marginTop: 8 }}>
-            {s.items.map(t => (
-              <li key={t.id} className="row" style={{ cursor: 'default' }}>
-                <span>{catName(t.categoryId)}{t.installment ? `, parcela ${t.installment.n} de ${t.installment.total}` : ''}{t.note ? ` — ${t.note}` : ''}</span>
-                <span className="val num">{formatBRL(t.amountCents)}</span>
-                <span className="sub">{dateLabel(t.date)}</span>
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-      <div className="btns">
-        <button className="btn" onClick={onEnter}>Lançar compras</button>
-        {!paid && remaining > 0 && <button className="btn sec" onClick={() => onPay(remaining)}>Pagar fatura</button>}
-        <button className="btn sec" onClick={onEdit}>Editar cartão</button>
+      <div className="panel" style={{ padding: 16 }}>
+        <div className="b-head" style={{ fontSize: 14 }}>
+          <span className="muted">Limite disponível</span>
+          <strong className="num">{formatBRL(avail)} <span className="muted" style={{ fontWeight: 600 }}>de {formatBRL(card.limitCents)}</span></strong>
+        </div>
+        <div className="limit" style={{ marginTop: 8 }} aria-hidden="true"><span style={{ width: `${card.limitCents ? Math.min(100, (used / card.limitCents) * 100) : 0}%` }} /></div>
+        {s.items.length > 0 && (
+          <details style={{ marginTop: 12 }}>
+            <summary style={{ cursor: 'pointer', fontWeight: 700, minHeight: 36 }}>{plural(s.items.length, 'compra', 'compras')} nesta fatura</summary>
+            <ul className="list" style={{ marginTop: 8, boxShadow: 'none', background: 'var(--suave-2)' }}>
+              {s.items.map(t => (
+                <li key={t.id} className="row with-ico" style={{ cursor: 'default' }}>
+                  <CatIcon category={cats.find(c => c.id === t.categoryId)} size={34} />
+                  <strong className="tx-title">{t.note ?? t.item ?? catName(t.categoryId)}{t.installment ? ` (${t.installment.n}/${t.installment.total})` : ''}</strong>
+                  <span className="val num">{formatBRL(t.amountCents)}</span>
+                  <span className="sub">{catName(t.categoryId)} · {dateLabel(t.date)}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+        <div className="btns" style={{ marginTop: 14 }}>
+          <button className="btn" onClick={onEnter}>Lançar compras</button>
+          {!paid && remaining > 0 && <button className="btn sec" onClick={() => onPay(remaining)}>Pagar fatura</button>}
+          <button className="btn sec" onClick={onEdit}>Editar cartão</button>
+        </div>
       </div>
     </section>
   )
+}
+
+/** Cor da "face" do cartão, fixa por cartão. */
+const FACES = ['#1d2b31', '#0b474d', '#3b2e5a', '#5a2e3a', '#2d3f6b', '#3d4a2c']
+function faceColor(id: string) {
+  let h = 0
+  for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0
+  return FACES[h % FACES.length]
 }
 
 function PayForm({ card, month, cents, onClose }: { card: Card; month: string; cents: number; onClose: () => void }) {

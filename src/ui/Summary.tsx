@@ -10,6 +10,7 @@ import { countedIn, periodRange, periodSummary, shiftPeriod, type PeriodKind, ty
 import { paidInvoices, txStatus } from '../domain/status'
 import { toCsv } from '../domain/csv'
 import { comparePeriods } from '../domain/compare'
+import { CatIcon } from './Icons'
 import { generateRecurrences } from '../data/recurring'
 import type { Account, Card, Category, ProfileId, Settings, Transaction } from '../domain/types'
 
@@ -248,8 +249,10 @@ export function Summary({ go }: { go: (p: 'lancamentos' | 'cartoes') => void }) 
               const k = cmp.byCategory.get(c.categoryId)
               const va = k?.vsAveragePct !== undefined && Math.abs(k.vsAveragePct) >= 15 ? Math.round(k.vsAveragePct) : undefined
               return (
-                <li key={c.categoryId} aria-label={name} style={{ padding: '12px 16px' }}>
-                  <div className="b-head"><strong>{name}</strong><span className="num" style={{ fontWeight: 700 }}>{formatBRL(c.spentCents)}</span></div>
+                <li key={c.categoryId} aria-label={name} style={{ padding: '14px 16px' }} className="cat-line">
+                  <CatIcon category={cat(c.categoryId)} size={38} />
+                  <div style={{ minWidth: 0 }}>
+                  <div className="b-head"><strong>{name}</strong><span className="num" style={{ fontWeight: 800 }}>{formatBRL(c.spentCents)}</span></div>
                   {va !== undefined && (
                     <div className={`trend ${va > 0 ? 'up' : 'down'}`}>{`${Math.abs(va)}% ${va > 0 ? 'acima' : 'abaixo'} da média dos últimos ${Math.min(6, cmp.periodsInAverage)} ${plural}`}</div>
                   )}
@@ -261,6 +264,7 @@ export function Summary({ go }: { go: (p: 'lancamentos' | 'cartoes') => void }) 
                       </div>
                     </>
                   )}
+                  </div>
                 </li>
               )
             })}
