@@ -6,6 +6,8 @@ import { formatBRL } from '../domain/money'
 import { competenceMonth } from '../domain/summary'
 import { paidInvoices, txStatus, type TxStatus } from '../domain/status'
 import { today } from '../domain/dates'
+import { addDays } from '../domain/period'
+import { CatIcon } from './Icons'
 import { generateRecurrences } from '../data/recurring'
 import type { Account, Card, Category, ProfileId, Recurrence, Transaction } from '../domain/types'
 
@@ -21,9 +23,7 @@ export function useGenerateRecurrences(month: string) {
 
 /** Filtro pedido por outra tela (ex.: Painel → "contas atrasadas"); vale só para a próxima abertura. */
 let requestedStatus: TxStatus | undefined
-let requestedNew = false
-/** Abre a lista já com o formulário de novo lançamento (atalho do ícone). */
-export function openNewEntry() { requestedNew = true }
+
 export function openWithStatus(st: TxStatus) { requestedStatus = st }
 
 export function Transactions({ go }: { go?: (p: 'importar') => void } = {}) {
@@ -39,7 +39,7 @@ export function Transactions({ go }: { go?: (p: 'importar') => void } = {}) {
   const [showFilters, setShowFilters] = useState(false)
   const [fCat, setFCat] = useState('')
   const [fWhere, setFWhere] = useState('')
-  const [editing, setEditing] = useState<Transaction | 'novo' | undefined>(() => { const n = requestedNew; requestedNew = false; return n ? 'novo' : undefined })
+  const [editing, setEditing] = useState<Transaction>()
   const txs = useList<Transaction>('transactions')
   const cats = useList<Category>('categories') ?? []
   const accounts = useList<Account>('accounts') ?? []
@@ -76,6 +76,22 @@ export function Transactions({ go }: { go?: (p: 'importar') => void } = {}) {
     void repo.put<Transaction>('transactions', next, me)
   }
   const STATUS_LABEL: Record<TxStatus, string> = { pago: 'Pago', previsto: 'Previsto', atrasado: 'Atrasado' }
+
+  // Agrupa por dia, com o saldo do dia (entradas − saídas − investido).
+  const dayFmt = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
+  const yesterday = addDays(now, -1)
+  const groups: Array<{ date: string; label: string; net: number; rows: typeof rows }> = []
+  for (const r of rows) {
+    const d = r.t.date
+    let g = groups.at(-1)
+    if (!g || g.date !== d) {
+      const label = d === now ? 'Hoje' : d === yesterday ? 'Ontem' : dayFmt.format(new Date(`${d}T12:00:00Z`)).replace(/\.$/, '')
+      g = { date: d, label: label.charAt(0).toUpperCase() + label.slice(1), net: 0, rows: [] }
+      groups.push(g)
+    }
+    g.rows.push(r)
+    if (!r.t.cardPayment) g.net += r.t.kind === 'receita' ? r.t.amountCents : -r.t.amountCents
+  }
 
   return (
     <>
@@ -125,38 +141,44 @@ export function Transactions({ go }: { go?: (p: 'importar') => void } = {}) {
       {txs && rows.length === 0 && (
         <div className="list"><p className="empty">{allOverdue ? 'Nenhuma conta atrasada.' : <>Nada lançado em {monthLabel(month)}. Toque em + para lançar.</>}</p></div>
       )}
-      {rows.length > 0 && (
-        <ul className="list">
-          {rows.map(({ t, st }) => {
-            const where = t.cardId ? `Cartão ${name(cards, t.cardId)}` : name(accounts, t.accountId)
-            const parcela = t.installment ? `, parcela ${t.installment.n} de ${t.installment.total}` : ''
-            const detail = t.note ?? t.item
-            const title = `${name(cats, t.categoryId) || 'Sem categoria'}${parcela}${detail ? ` — ${detail}` : ''}`
-            const when = t.cardId ? `Compra ${dateLabel(t.date)}` : st === 'pago'
-              ? `${t.kind === 'receita' ? 'Recebido' : 'Pago'} ${dateLabel(t.paidDate ?? t.date)}`
-              : `${st === 'atrasado' ? 'Venceu' : 'Vence'} ${dateLabel(t.date)}`
-            const sign = t.kind === 'receita' ? '+' : t.kind === 'investimento' ? '→ ' : '−'
-            const cls = t.kind === 'receita' ? 'entrada' : t.kind === 'investimento' ? 'investe' : 'saida'
-            const canMark = st !== 'pago' && !t.cardId && !t.cardPayment
-            return (
-              <li key={t.id} aria-label={title} className="txrow">
-                <button className="row" onClick={() => setEditing(t)}>
-                  <span><strong>{title}</strong></span>
-                  <span className={`val num ${cls}`}>{sign}{formatBRL(t.amountCents)}</span>
-                  <span className="sub">{when}, {where}, {names[t.profileId]}{t.kind === 'investimento' ? ', investimento' : ''}</span>
-                </button>
-                <div className="acts">
-                  {!t.cardPayment && <span className={`badge ${st}`}>{STATUS_LABEL[st]}</span>}
-                  {canMark && <button className="mini" onClick={() => markPaid(t)}>Marcar como pago</button>}
-                </div>
-              </li>
-            )
-          })}
-        </ul>
-      )}
+      {groups.map(g => (
+        <section key={g.date} aria-label={g.label}>
+          <div className="day-head"><span>{g.label}</span><span className="num">{g.net >= 0 ? '+' : '−'}{formatBRL(Math.abs(g.net))}</span></div>
+          <ul className="list">
+            {g.rows.map(({ t, st }) => {
+              const where = t.cardId ? `Cartão ${name(cards, t.cardId)}` : name(accounts, t.accountId)
+              const parcela = t.installment ? ` (${t.installment.n}/${t.installment.total})` : ''
+              const detail = t.note ?? t.item
+              const catN = name(cats, t.categoryId) || 'Sem categoria'
+              const title = `${catN}${t.installment ? `, parcela ${t.installment.n} de ${t.installment.total}` : ''}${detail ? ` — ${detail}` : ''}`
+              const when = t.cardId ? `Compra ${dateLabel(t.date)}` : st === 'pago'
+                ? `${t.kind === 'receita' ? 'Recebido' : 'Pago'} ${dateLabel(t.paidDate ?? t.date)}`
+                : `${st === 'atrasado' ? 'Venceu' : 'Vence'} ${dateLabel(t.date)}`
+              const sign = t.kind === 'receita' ? '+' : t.kind === 'investimento' ? '→ ' : '−'
+              const cls = t.kind === 'receita' ? 'entrada' : t.kind === 'investimento' ? 'investe' : ''
+              const canMark = st !== 'pago' && !t.cardId && !t.cardPayment
+              return (
+                <li key={t.id} aria-label={title} className="txrow">
+                  <button className="row with-ico" onClick={() => setEditing(t)}>
+                    <CatIcon category={cats.find(c => c.id === t.categoryId)} />
+                    <strong className="tx-title">{detail ?? catN}{parcela}</strong>
+                    <span className={`val num ${cls}`}>{sign}{formatBRL(t.amountCents)}</span>
+                    <span className="sub">{detail ? `${catN} · ` : ''}{when} · {where} · {names[t.profileId]}</span>
+                  </button>
+                  {(!t.cardPayment && st !== 'pago') || canMark ? (
+                    <div className="acts">
+                      {!t.cardPayment && <span className={`badge ${st}`}>{STATUS_LABEL[st]}</span>}
+                      {canMark && <button className="mini" onClick={() => markPaid(t)}>Marcar como pago</button>}
+                    </div>
+                  ) : null}
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      ))}
 
-      <button className="fab" aria-label="Novo lançamento" onClick={() => setEditing('novo')}>+</button>
-      {editing && <TransactionForm initial={editing === 'novo' ? undefined : editing} onClose={() => setEditing(undefined)} />}
+      {editing && <TransactionForm initial={editing} onClose={() => setEditing(undefined)} />}
     </>
   )
 }

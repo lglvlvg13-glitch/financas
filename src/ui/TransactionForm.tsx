@@ -220,8 +220,7 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
       )}
 
       {!isParcela && !isPayment && (
-        <div className="field">
-          <span className="lbl">Tipo</span>
+        <div className="kind-pills">
           <div className="seg" role="group" aria-label="Tipo">
             <button aria-pressed={kind === 'despesa'} onClick={() => { setKind('despesa'); setCategoryId('') }}>Despesa</button>
             <button aria-pressed={kind === 'receita'} onClick={() => { setKind('receita'); setCategoryId(''); if (cardId) setWhere('') }}>Receita</button>
@@ -230,11 +229,15 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
         </div>
       )}
 
-      <div className="field">
+      <div className="amount-field">
         <label htmlFor="tx-valor">{isParcela && scope === 'todas' ? (midStream ? 'Valor de cada parcela (R$)' : 'Valor total da compra (R$)') : 'Valor (R$)'}</label>
-        <input id="tx-valor" inputMode="decimal" placeholder="0,00" value={amount} onChange={e => setAmount(e.target.value)} />
+        <div className="amount">
+          <span>R$</span>
+          <input id="tx-valor" inputMode="decimal" placeholder="0,00" autoComplete="off" value={amount} onChange={e => setAmount(e.target.value)}
+            className={kind === 'receita' ? 'entrada' : kind === 'investimento' ? 'investe' : ''} />
+        </div>
         {last && centsToInput(last.amountCents) !== amount && (
-          <button className="mini" style={{ justifySelf: 'start' }} onClick={() => setAmount(centsToInput(last.amountCents))}>
+          <button className="mini" onClick={() => setAmount(centsToInput(last.amountCents))}>
             Usar {formatBRL(last.amountCents)} (última vez)
           </button>
         )}

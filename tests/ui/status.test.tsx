@@ -47,7 +47,8 @@ test('lista mostra situação e "Marcar como pago" funciona', async () => {
   await s.user.click(within(item).getByRole('button', { name: 'Marcar como pago' }))
   await waitFor(async () => expect((await s.repo.list<Transaction>('transactions'))[0].pending).toBeUndefined())
   expect((await s.repo.list<Transaction>('transactions'))[0].paidDate).toBe(D)
-  expect(await within(item).findByText('Pago')).toBeInTheDocument()
+  // Pago não leva etiqueta (a lista mostra só o que pede atenção).
+  await waitFor(() => expect(within(screen.getByRole('listitem', { name: /Energia/ })).queryByRole('button', { name: 'Marcar como pago' })).toBeNull())
 })
 
 test('investimento é um terceiro tipo com as categorias de investimento', async () => {

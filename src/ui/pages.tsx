@@ -7,17 +7,31 @@ import { Transactions } from './Transactions'
 import { Dashboard } from './Dashboard'
 import { YearReport } from './YearReport'
 import { Import } from './Import'
+import { Icon, type IconName } from './Icons'
 
 export type Page = 'importar' | 'resumo' | 'lancamentos' | 'painel' | 'cartoes' | 'mais' | 'contas' | 'relatorio' | 'ajustes' | 'categorias' | 'recorrentes'
 
 function More({ go }: { go: (p: Page) => void }) {
+  const items: Array<[Page, string, string, IconName]> = [
+    ['contas', 'Contas', 'Saldos das contas, poupança e Pix', 'conta'],
+    ['relatorio', 'Relatório do ano', 'Cada categoria mês a mês, como na planilha', 'relatorio'],
+    ['importar', 'Importar extrato', 'OFX ou CSV do banco e da fatura do cartão', 'importar'],
+    ['ajustes', 'Ajustes', 'Perfis, categorias, recorrentes, bloqueio e tema', 'ajustes'],
+  ]
   return (
     <>
       <h1>Mais</h1>
-      <ul className="list" style={{ marginTop: 16 }}>
-        <li><button className="row" aria-label="Contas" onClick={() => go('contas')}><strong>Contas</strong><span className="sub">Saldos das contas, poupança e Pix</span></button></li>
-        <li><button className="row" aria-label="Relatório do ano" onClick={() => go('relatorio')}><strong>Relatório do ano</strong><span className="sub">Cada categoria mês a mês, como na planilha</span></button></li>
-        <li><button className="row" aria-label="Ajustes" onClick={() => go('ajustes')}><strong>Ajustes</strong><span className="sub">Perfis, categorias, recorrentes e sincronização</span></button></li>
+      <ul className="list more-list">
+        {items.map(([id, label, sub, icon]) => (
+          <li key={id}>
+            <button className="row" aria-label={label} onClick={() => go(id)}>
+              <span className="ico"><Icon name={icon} size={21} /></span>
+              <strong>{label}</strong>
+              <span className="chev"><Icon name="seta" size={18} /></span>
+              <span className="sub">{sub}</span>
+            </button>
+          </li>
+        ))}
       </ul>
     </>
   )
