@@ -9,6 +9,7 @@ import { METHODS } from '../domain/methods'
 import { countedIn, periodRange, periodSummary, shiftPeriod, type PeriodKind, type Range } from '../domain/period'
 import { paidInvoices, txStatus } from '../domain/status'
 import { toCsv } from '../domain/csv'
+import { comparePeriods } from '../domain/compare'
 import { generateRecurrences } from '../data/recurring'
 import type { Account, Card, Category, ProfileId, Settings, Transaction } from '../domain/types'
 
@@ -114,6 +115,25 @@ export function Summary({ go }: { go: (p: 'lancamentos' | 'cartoes') => void }) 
     values: [p.incomeCents, p.expenseCents, p.investCents],
   }))
   const nothing = s.incomeCents === 0 && s.expenseCents === 0 && s.investCents === 0
+  const cmp = comparePeriods(kind, kind === 'personalizado' ? custom : anchor, data, { profile: opts.profile, onlyPaid, today: now })
+  const UNIT: Record<Kind, [string, string]> = {
+    dia: ['dia anterior', 'dias'], semana: ['semana anterior', 'semanas'], mes: ['mês anterior', 'meses'],
+    trimestre: ['trimestre anterior', 'trimestres'], semestre: ['semestre anterior', 'semestres'], ano: ['ano anterior', 'anos'],
+    personalizado: ['período anterior', 'períodos iguais'],
+  }
+  const [prevName, plural] = UNIT[kind]
+  const vsText = (cur: number, base: number, what: string) => {
+    if (base <= 0) return undefined
+    const p = Math.round(((cur - base) / base) * 100)
+    if (p === 0) return `igual ao ${what}`
+    return `${Math.abs(p)}% ${p > 0 ? 'acima' : 'abaixo'} do ${what}`
+  }
+  const totalsCmp = [
+    ['Entradas', cmp.totals.income], ['Saídas', cmp.totals.expense], ['Investido', cmp.totals.invest],
+  ].map(([label, c]) => {
+    const t = vsText((c as { current: number }).current, (c as { previous: number }).previous, prevName)
+    return t ? `${label as string} ${t}` : undefined
+  }).filter(Boolean) as string[]
 
   return (
     <div className="resumo">
@@ -168,6 +188,10 @@ export function Summary({ go }: { go: (p: 'lancamentos' | 'cartoes') => void }) 
         <div role="group" aria-label="Investido"><span className="muted">Investido</span><strong className="num investe">{formatBRL(s.investCents)}</strong></div>
       </div>
 
+      {!nothing && totalsCmp.length > 0 && (
+        <p className="cmp-line">{totalsCmp.join(' · ')}</p>
+      )}
+
       {nothing && (
         <div className="list" style={{ marginTop: 20 }}>
           <p className="empty">Nada lançado neste período.{' '}
@@ -221,9 +245,14 @@ export function Summary({ go }: { go: (p: 'lancamentos' | 'cartoes') => void }) 
               const near = !over && c.budgetCents !== undefined && c.spentCents >= c.budgetCents * 0.8
               const pct = c.budgetCents ? Math.min(100, (c.spentCents / c.budgetCents) * 100) : 0
               const name = catName(c.categoryId)
+              const k = cmp.byCategory.get(c.categoryId)
+              const va = k?.vsAveragePct !== undefined && Math.abs(k.vsAveragePct) >= 15 ? Math.round(k.vsAveragePct) : undefined
               return (
                 <li key={c.categoryId} aria-label={name} style={{ padding: '12px 16px' }}>
                   <div className="b-head"><strong>{name}</strong><span className="num" style={{ fontWeight: 700 }}>{formatBRL(c.spentCents)}</span></div>
+                  {va !== undefined && (
+                    <div className={`trend ${va > 0 ? 'up' : 'down'}`}>{`${Math.abs(va)}% ${va > 0 ? 'acima' : 'abaixo'} da média dos últimos ${Math.min(6, cmp.periodsInAverage)} ${plural}`}</div>
+                  )}
                   {c.budgetCents !== undefined && (
                     <>
                       <div className={`bar ${over ? 'over' : near ? 'near' : ''}`} aria-hidden="true"><span style={{ width: `${pct}%` }} /></div>

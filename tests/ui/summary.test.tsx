@@ -157,3 +157,15 @@ test('Painel agrupa compras de cartão atrasadas numa fatura só', async () => {
   expect(await screen.findByRole('heading', { name: 'Cartões' })).toBeInTheDocument()
   expect(screen.getByText(/Janeiro de/)).toBeInTheDocument()
 })
+
+test('Resumo compara a categoria com a média dos últimos meses', async () => {
+  const s = await setup({ ready: true })
+  await seed(s.repo)
+  for (let i = 1; i <= 6; i++) {
+    await s.repo.put<Transaction>('transactions', { kind: 'despesa', amountCents: 60000, date: `${addMonths(M, -i)}-03`, categoryId: 'cat-alimentacao', profileId: 'u1', accountId: 'a1' }, 'u1')
+  }
+  await openResumo(s)
+  const row = await screen.findByRole('listitem', { name: 'Alimentação' })
+  expect(await within(row).findByText('100% acima da média dos últimos 6 meses')).toBeInTheDocument()
+  expect(screen.getByText(/Saídas .* acima do mês anterior/)).toBeInTheDocument()
+})
