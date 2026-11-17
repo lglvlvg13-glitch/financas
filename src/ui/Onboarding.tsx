@@ -87,7 +87,7 @@ function useDarkBar() {
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]')
     const before = meta?.getAttribute('content')
-    meta?.setAttribute('content', '#061013')
+    meta?.setAttribute('content', '#060b1a')
     return () => { if (before) meta?.setAttribute('content', before) }
   }, [])
 }
