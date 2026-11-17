@@ -21,6 +21,9 @@ export function useGenerateRecurrences(month: string) {
 
 /** Filtro pedido por outra tela (ex.: Painel → "contas atrasadas"); vale só para a próxima abertura. */
 let requestedStatus: TxStatus | undefined
+let requestedNew = false
+/** Abre a lista já com o formulário de novo lançamento (atalho do ícone). */
+export function openNewEntry() { requestedNew = true }
 export function openWithStatus(st: TxStatus) { requestedStatus = st }
 
 export function Transactions({ go }: { go?: (p: 'importar') => void } = {}) {
@@ -32,7 +35,11 @@ export function Transactions({ go }: { go?: (p: 'importar') => void } = {}) {
     return st
   })
   const { repo, me } = useApp()
-  const [editing, setEditing] = useState<Transaction | 'novo'>()
+  const [q, setQ] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
+  const [fCat, setFCat] = useState('')
+  const [fWhere, setFWhere] = useState('')
+  const [editing, setEditing] = useState<Transaction | 'novo' | undefined>(() => { const n = requestedNew; requestedNew = false; return n ? 'novo' : undefined })
   const txs = useList<Transaction>('transactions')
   const cats = useList<Category>('categories') ?? []
   const accounts = useList<Account>('accounts') ?? []
@@ -49,7 +56,17 @@ export function Transactions({ go }: { go?: (p: 'importar') => void } = {}) {
   // "Atrasados" mostra as contas atrasadas de qualquer mês: é a lista do que falta pagar.
   const allOverdue = statusFilter === 'atrasado'
   const count = (st: TxStatus) => st === 'atrasado' ? overdueAll.length : inMonth.filter(r => r.st === st && !r.t.cardPayment).length
-  const rows = (allOverdue ? overdueAll : inMonth)
+  // Busca e filtros valem para todos os meses.
+  const norm = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  const searching = q.trim() !== '' || fCat !== '' || fWhere !== ''
+  const matches = (t: Transaction) => {
+    if (fCat && t.categoryId !== fCat) return false
+    if (fWhere && (fWhere.startsWith('c:') ? t.cardId !== fWhere.slice(2) : t.accountId !== fWhere.slice(2))) return false
+    if (!q.trim()) return true
+    const hay = norm([t.note, t.item, name(cats, t.categoryId), String(t.amountCents / 100).replace('.', ',')].filter(Boolean).join(' '))
+    return norm(q).split(/\s+/).every(w => hay.includes(w))
+  }
+  const rows = (searching ? all.filter(r => matches(r.t)) : allOverdue ? overdueAll : inMonth)
     .filter(r => statusFilter === 'todos' || (r.st === statusFilter && !r.t.cardPayment))
     .sort((a, b) => b.t.date.localeCompare(a.t.date) || b.t.updatedAt - a.t.updatedAt)
 
@@ -66,7 +83,33 @@ export function Transactions({ go }: { go?: (p: 'importar') => void } = {}) {
         <h1>Lançamentos</h1>
         {go && <button className="mini" onClick={() => go('importar')}>Importar extrato</button>}
       </div>
-      {allOverdue ? <p className="muted" style={{ margin: '4px 0 16px' }}>Todas as contas atrasadas, de qualquer mês.</p> : <MonthNav month={month} setMonth={setMonth} />}
+      <div className="search-row">
+        <input aria-label="Buscar" type="search" placeholder="Buscar (ex.: padaria, 287,40)" value={q} onChange={e => setQ(e.target.value)} />
+        <button className="mini" aria-expanded={showFilters} onClick={() => setShowFilters(!showFilters)}>Filtros{fCat || fWhere ? ' •' : ''}</button>
+      </div>
+      {showFilters && (
+        <div className="range filters-box">
+          <div className="field">
+            <label htmlFor="f-cat">Filtrar categoria</label>
+            <select id="f-cat" value={fCat} onChange={e => setFCat(e.target.value)}>
+              <option value="">Todas</option>
+              {cats.filter(c => !c.deletedAt).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="f-onde">Filtrar conta ou cartão</label>
+            <select id="f-onde" value={fWhere} onChange={e => setFWhere(e.target.value)}>
+              <option value="">Todas</option>
+              {accounts.map(a => <option key={a.id} value={`a:${a.id}`}>{a.name}</option>)}
+              {cards.map(c => <option key={c.id} value={`c:${c.id}`}>Cartão {c.name}</option>)}
+            </select>
+          </div>
+        </div>
+      )}
+      {searching
+        ? <p className="muted" style={{ margin: '4px 0 16px' }}>{rows.length} {rows.length === 1 ? 'lançamento encontrado' : 'lançamentos encontrados'}, em todos os meses — total {formatBRL(rows.reduce((a, r) => a + r.t.amountCents, 0))}.{' '}
+            <button className="linklike" onClick={() => { setQ(''); setFCat(''); setFWhere('') }}>Limpar busca</button></p>
+        : allOverdue ? <p className="muted" style={{ margin: '4px 0 16px' }}>Todas as contas atrasadas, de qualquer mês.</p> : <MonthNav month={month} setMonth={setMonth} />}
       <div className="seg" role="group" aria-label="Filtrar por pessoa" style={{ marginBottom: 16 }}>
         <button aria-pressed={filter === 'todos'} onClick={() => setFilter('todos')}>Todos</button>
         <button aria-pressed={filter === 'u1'} onClick={() => setFilter('u1')}>{names.u1}</button>

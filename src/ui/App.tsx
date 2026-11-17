@@ -7,6 +7,7 @@ import { UndoProvider } from './UndoToast'
 import { Pages, type Page } from './pages'
 import { LockScreen, useLockState } from './Lock'
 import { useDueNotifications } from './Reminders'
+import { openNewEntry } from './Transactions'
 
 const NAV: Array<[Page, string]> = [
   ['painel', 'Painel'],
@@ -21,7 +22,12 @@ const UNDER_MAIS: Page[] = ['contas', 'relatorio', 'ajustes', 'categorias', 'rec
 
 function Shell() {
   const { device } = useApp()
-  const [page, setPage] = useState<Page>('painel')
+  // Atalhos do ícone do app: ?abrir=novo ou ?abrir=importar.
+  const [page, setPage] = useState<Page>(() => {
+    const a = new URLSearchParams(window.location.search).get('abrir')
+    if (a === 'novo') openNewEntry()
+    return a === 'novo' ? 'lancamentos' : a === 'importar' ? 'importar' : 'painel'
+  })
   const [locked, unlock] = useLockState()
   useDueNotifications()
 

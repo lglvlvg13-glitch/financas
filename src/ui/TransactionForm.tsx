@@ -181,6 +181,15 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
   }
 
   const catOptions = categories.filter(c => c.kind === kind && (!c.system || c.id === initial?.categoryId))
+  // Mais usadas nos últimos 90 dias aparecem primeiro.
+  const since = addMonths(monthOf(today()), -3)
+  const freq = new Map<string, number>()
+  for (const t of allTx) if (t.kind === kind && monthOf(t.date) >= since) freq.set(t.categoryId, (freq.get(t.categoryId) ?? 0) + 1)
+  const frequent = catOptions.filter(c => freq.has(c.id)).sort((a, b) => freq.get(b.id)! - freq.get(a.id)!).slice(0, 5)
+  // Valor da última vez com a mesma categoria (e item).
+  const last = !initial && categoryId ? allTx
+    .filter(t => t.categoryId === categoryId && (!item || t.item === item) && !t.installment)
+    .sort((a, b) => b.date.localeCompare(a.date) || b.updatedAt - a.updatedAt)[0] : undefined
   const chosen = categories.find(c => c.id === categoryId)
   const items = kind === 'despesa' ? chosen?.items ?? [] : []
   const hint = chosen && !items.length && EXAMPLES[chosen.id] ? `O que entra aqui: ${EXAMPLES[chosen.id].join(', ')}.` : undefined
@@ -215,6 +224,11 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
       <div className="field">
         <label htmlFor="tx-valor">{isParcela && scope === 'todas' ? (midStream ? 'Valor de cada parcela (R$)' : 'Valor total da compra (R$)') : 'Valor (R$)'}</label>
         <input id="tx-valor" inputMode="decimal" placeholder="0,00" value={amount} onChange={e => setAmount(e.target.value)} />
+        {last && centsToInput(last.amountCents) !== amount && (
+          <button className="mini" style={{ justifySelf: 'start' }} onClick={() => setAmount(centsToInput(last.amountCents))}>
+            Usar {formatBRL(last.amountCents)} (última vez)
+          </button>
+        )}
         {errors.amount && <span className="err">{errors.amount}</span>}
       </div>
 
@@ -227,7 +241,12 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
         <label htmlFor="tx-cat">Categoria</label>
         <select id="tx-cat" value={categoryId} disabled={isPayment} onChange={e => { setCategoryId(e.target.value); setGroupOverride(undefined); setItem('') }}>
           <option value="">Escolha…</option>
-          {catOptions.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          {frequent.length > 0 ? (
+            <>
+              <optgroup label="Mais usadas">{frequent.map(c => <option key={`f-${c.id}`} value={c.id}>{c.name}</option>)}</optgroup>
+              <optgroup label="Todas">{catOptions.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>
+            </>
+          ) : catOptions.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         {errors.category && <span className="err">{errors.category}</span>}
         {hint && <span className="hint">{hint}</span>}
