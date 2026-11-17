@@ -192,7 +192,9 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
     .sort((a, b) => b.date.localeCompare(a.date) || b.updatedAt - a.updatedAt)[0] : undefined
   const chosen = categories.find(c => c.id === categoryId)
   const items = kind === 'despesa' ? chosen?.items ?? [] : []
-  const hint = chosen && !items.length && EXAMPLES[chosen.id] ? `O que entra aqui: ${EXAMPLES[chosen.id].join(', ')}.` : undefined
+  const hint = chosen?.id === 'cat-poupanca'
+    ? 'No método 50/30/20 isto conta como Investimentos. Para dinheiro em caixinha, poupança ou corretora, prefira o tipo Investimento.'
+    : chosen && !items.length && EXAMPLES[chosen.id] ? `O que entra aqui: ${EXAMPLES[chosen.id].join(', ')}.` : undefined
   const itemGroup = items.find(x => x.name === item)?.group
   const effectiveGroup = groupOverride ?? itemGroup ?? chosen?.group ?? 'desejo'
 
@@ -262,7 +264,7 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
         </div>
       )}
 
-      {kind === 'despesa' && chosen && !chosen.system && (
+      {kind === 'despesa' && chosen && !chosen.system && chosen.id !== 'cat-poupanca' && (
         <div className="field">
           <span className="lbl">No método 50/30/20</span>
           <div className="seg" role="group" aria-label="No método 50/30/20">

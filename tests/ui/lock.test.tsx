@@ -41,3 +41,12 @@ test('PINs diferentes não são aceitos', async () => {
   expect(await within(dlg).findByText('Os dois PINs não são iguais.')).toBeInTheDocument()
   expect((await s.repo.getDevice()).lock).toBeUndefined()
 })
+
+test('tema escuro escolhido em Ajustes', async () => {
+  const s = await setup({ ready: true })
+  await s.user.click(await screen.findByRole('button', { name: 'Mais' }))
+  await s.user.click(await screen.findByRole('button', { name: 'Ajustes' }))
+  await s.user.click(within(await screen.findByRole('group', { name: 'Tema' })).getByRole('button', { name: 'Escuro' }))
+  await waitFor(() => expect(document.documentElement.dataset.theme).toBe('escuro'))
+  expect((await s.repo.getDevice()).theme).toBe('escuro')
+})

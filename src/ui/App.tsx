@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AppProvider, useApp, type AppDeps } from './context'
 import { Welcome, WhoAreYou } from './Onboarding'
 import { Settings } from './Settings'
@@ -30,6 +30,12 @@ function Shell() {
   })
   const [locked, unlock] = useLockState()
   useDueNotifications()
+  useEffect(() => {
+    const theme = device?.theme ?? 'auto'
+    document.documentElement.dataset.theme = theme
+    const dark = theme === 'escuro' || (theme === 'auto' && window.matchMedia?.('(prefers-color-scheme: dark)').matches)
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0f1722' : '#1d3557')
+  }, [device?.theme])
 
   if (!device) return null
   if (!device.dataFileId) return <Welcome />

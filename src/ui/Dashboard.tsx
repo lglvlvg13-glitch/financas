@@ -9,13 +9,13 @@ import type { Page } from './pages'
 import { formatBRL } from '../domain/money'
 import { monthOf, today } from '../domain/dates'
 import { dashboard } from '../domain/report'
-import { countedIn, periodRange, periodSummary } from '../domain/period'
+import { countedIn, periodRange, periodSummary, resolveGroup } from '../domain/period'
 import { paidInvoices, txStatus } from '../domain/status'
 import type { Card, Category, Settings, Transaction } from '../domain/types'
 
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 const MONTHS_FULL = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
-const C = { in: '#12795f', out: '#b8432f', inv: '#2f5d9e', ink: '#1d3557' }
+const C = { in: 'var(--entrada)', out: 'var(--saida)', inv: 'var(--investe-cor)', ink: 'var(--barra)' }
 type Series = 'fluxo' | 'investido' | 'saldo'
 
 const pct = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0)
@@ -27,10 +27,10 @@ function Ring({ value, inside, label }: { value: number; inside: boolean; label:
   const shown = Math.min(1, value)
   return (
     <svg width="64" height="64" viewBox="0 0 64 64" role="img" aria-label={label}>
-      <circle cx="32" cy="32" r={r} fill="none" stroke="#e6ecea" strokeWidth="7" />
-      <circle cx="32" cy="32" r={r} fill="none" stroke={inside ? C.in : C.out} strokeWidth="7" strokeLinecap="round"
+      <circle cx="32" cy="32" r={r} fill="none" style={{ stroke: 'var(--suave-2)' }} strokeWidth="7" />
+      <circle cx="32" cy="32" r={r} fill="none" style={{ stroke: inside ? C.in : C.out }} strokeWidth="7" strokeLinecap="round"
         strokeDasharray={`${len * shown} ${len}`} transform="rotate(-90 32 32)" />
-      <text x="32" y="36.5" textAnchor="middle" fontSize="13" fontWeight="800" fill={C.ink}>{Math.round(value * 100)}%</text>
+      <text x="32" y="36.5" textAnchor="middle" fontSize="13" fontWeight="800" style={{ fill: 'var(--tinta)' }}>{Math.round(value * 100)}%</text>
     </svg>
   )
 }
@@ -90,6 +90,11 @@ export function Dashboard({ go }: { go: (p: Page) => void }) {
   const top = ys.byCategory.filter(c => c.kind === 'despesa' && c.spentCents > 0).slice(0, 5)
   const topMax = Math.max(1, ...top.map(c => c.spentCents))
   const cat = (id: string) => categories.find(c => c.id === id)
+  // Quanto de cada categoria foi Necessidade e quanto foi Desejo (pela classificação de cada lançamento).
+  const needShare = new Map<string, number>()
+  for (const { t } of countedIn(yearRange, data, { onlyPaid, today: now })) {
+    if (t.kind === 'despesa' && resolveGroup(t, cat(t.categoryId)) === 'necessidade') needShare.set(t.categoryId, (needShare.get(t.categoryId) ?? 0) + t.amountCents)
+  }
 
   // Gráfico do ano.
   const vals = d.months.map(x => series === 'fluxo' ? [x.incomeCents, x.expenseCents]
@@ -243,7 +248,12 @@ export function Dashboard({ go }: { go: (p: Page) => void }) {
               return (
                 <li key={c.categoryId}>
                   <div className="b-head">
-                    <span><b>{k?.name ?? 'Sem categoria'}</b> <small className={`tag ${k?.group === 'necessidade' ? 'need' : 'want'}`}>{k?.group === 'necessidade' ? 'Necessidade' : 'Desejo'}</small></span>
+                    <span><b>{k?.name ?? 'Sem categoria'}</b> {(() => {
+                      const need = Math.round(((needShare.get(c.categoryId) ?? 0) / c.spentCents) * 100)
+                      if (need >= 100) return <small className="tag need">Necessidade</small>
+                      if (need <= 0) return <small className="tag want">Desejo</small>
+                      return <small className="tag mix">Necessidade {need}% · Desejo {100 - need}%</small>
+                    })()}</span>
                     <span className="num" style={{ fontWeight: 700 }}>{formatBRL(c.spentCents)}</span>
                   </div>
                   <div className="topbar" aria-hidden="true"><span style={{ width: `${(c.spentCents / topMax) * 100}%` }} /></div>

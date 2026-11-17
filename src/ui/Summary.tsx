@@ -205,7 +205,7 @@ export function Summary({ go }: { go: (p: 'lancamentos' | 'cartoes') => void }) 
           <h2>{s.series.unit === 'mes' ? 'Mês a mês' : 'Dia a dia'}</h2>
           <div className="panel">
             <BarChart title={`Entradas, saídas e investimentos ${s.series.unit === 'mes' ? 'mês a mês' : 'dia a dia'}`} bars={bars}
-              colors={['#12795f', '#b8432f', '#2f5d9e']} legend={['Entradas', 'Saídas', 'Investido']} />
+              colors={['var(--entrada)', 'var(--saida)', 'var(--investe-cor)']} legend={['Entradas', 'Saídas', 'Investido']} />
           </div>
         </>
       )}

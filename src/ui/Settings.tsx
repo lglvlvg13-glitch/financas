@@ -5,7 +5,7 @@ import { SYNC_TEXT } from './SyncBanner'
 import { LockSettings } from './Lock'
 
 export function Settings({ go }: { go: (page: 'categorias' | 'recorrentes') => void }) {
-  const { repo, me, setMe, syncStatus, syncNow } = useApp()
+  const { repo, me, setMe, syncStatus, syncNow, device } = useApp()
   const names = useProfiles()
   const [draft, setDraft] = useState(names)
   const [error, setError] = useState<string>()
@@ -58,6 +58,14 @@ export function Settings({ go }: { go: (page: 'categorias' | 'recorrentes') => v
         <button className="btn sec" onClick={() => go('categorias')}>Categorias e orçamento</button>
         <button className="btn sec" onClick={() => go('recorrentes')}>Lançamentos recorrentes</button>
       </div>
+
+      <h2>Aparência</h2>
+      <div className="seg" role="group" aria-label="Tema">
+        {([['auto', 'Automático'], ['claro', 'Claro'], ['escuro', 'Escuro']] as const).map(([t, l]) => (
+          <button key={t} aria-pressed={(device?.theme ?? 'auto') === t} onClick={() => repo.setDevice({ theme: t })}>{l}</button>
+        ))}
+      </div>
+      <p className="hint" style={{ marginTop: 6 }}>Automático segue o modo claro ou escuro do celular.</p>
 
       <LockSettings />
 

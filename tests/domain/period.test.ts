@@ -121,3 +121,15 @@ test('classificação por item: lançamento > item da categoria > categoria > de
   expect(resolveGroup(t({ item: 'Item apagado' }), ali)).toBe('necessidade')
   expect(resolveGroup(t({}), undefined)).toBe('desejo')
 })
+
+test('despesa em "Poupança e investimentos" conta na parte Investimentos do método', () => {
+  const cs: Category[] = [...cats, { id: 'cat-poupanca', name: 'Poupança e investimentos', kind: 'despesa', group: 'necessidade', ...meta }]
+  const rows = [
+    tx({ kind: 'receita', amountCents: 1000000, categoryId: 'cat-sal' }),
+    tx({ amountCents: 100000, categoryId: 'cat-poupanca' }),
+    tx({ kind: 'investimento', amountCents: 50000, categoryId: 'cat-cx' }),
+  ]
+  const s = periodSummary({ from: '2026-11-01', to: '2026-11-30' }, { transactions: rows, categories: cs, cards: [] }, { today: '2026-11-16' })
+  expect(s.method.buckets[0].realCents).toBe(0)
+  expect(s.method.buckets[2].realCents).toBe(150000)
+})

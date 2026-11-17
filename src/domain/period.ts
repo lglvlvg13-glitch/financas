@@ -44,6 +44,9 @@ export function shiftPeriod(kind: PeriodKind, anchor: string, n: number): string
   return clampDay(addMonths(monthOf(anchor), monthSpan[kind] * n), dayOf(anchor))
 }
 
+/** Categoria de despesa da planilha para dinheiro guardado: no método, é Investimento. */
+export const SAVINGS_EXPENSE_ID = 'cat-poupanca'
+
 export interface SummaryData { transactions: Transaction[]; categories: Category[]; cards: Card[] }
 export interface SummaryOpts { profile?: ProfileId; onlyPaid?: boolean; methodId?: string; today: string }
 
@@ -108,14 +111,19 @@ export function periodSummary(range: Range, data: SummaryData, opts: SummaryOpts
 
   // 50/30/20: Necessidade x Desejo de cada lançamento (sem classificação = desejo, como na planilha).
   const byId = new Map(cats.map(c => [c.id, c]))
-  let needReal = 0
-  for (const { t } of rows) if (t.kind === 'despesa' && resolveGroup(t, byId.get(t.categoryId)) === 'necessidade') needReal += t.amountCents
+  // Dinheiro guardado lançado como despesa em "Poupança e investimentos" conta na parte Investimentos.
+  let needReal = 0, savedAsExpense = 0
+  for (const { t } of rows) {
+    if (t.kind !== 'despesa') continue
+    if (t.categoryId === SAVINGS_EXPENSE_ID) savedAsExpense += t.amountCents
+    else if (resolveGroup(t, byId.get(t.categoryId)) === 'necessidade') needReal += t.amountCents
+  }
   const m = methodById(opts.methodId)
   const plan = (pct: number) => Math.round(totals.incomeCents * pct / 100)
   const buckets = [
     { key: 'need' as const, name: 'Necessidades', pct: m.need, plannedCents: plan(m.need), realCents: needReal },
-    { key: 'want' as const, name: 'Desejos', pct: m.want, plannedCents: plan(m.want), realCents: totals.expenseCents - needReal },
-    { key: 'invest' as const, name: 'Investimentos', pct: m.invest, plannedCents: plan(m.invest), realCents: totals.investCents },
+    { key: 'want' as const, name: 'Desejos', pct: m.want, plannedCents: plan(m.want), realCents: totals.expenseCents - needReal - savedAsExpense },
+    { key: 'invest' as const, name: 'Investimentos', pct: m.invest, plannedCents: plan(m.invest), realCents: totals.investCents + savedAsExpense },
   ].map(b => ({
     ...b, diffCents: b.plannedCents - b.realCents,
     inside: b.key === 'invest' ? b.realCents >= b.plannedCents : b.realCents <= b.plannedCents,
