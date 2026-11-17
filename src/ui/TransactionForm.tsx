@@ -10,10 +10,24 @@ import type { Account, Card, Category, Recurrence, Transaction, TransactionDraft
 
 type Scope = 'uma' | 'todas'
 
+/** Fotos grandes do celular viram JPEG de até 1600px (economiza espaço no Drive e no envio). */
+async function shrinkImage(file: File): Promise<Blob> {
+  if (!file.type.startsWith('image/') || typeof createImageBitmap !== 'function') return file
+  try {
+    const img = await createImageBitmap(file)
+    const scale = Math.min(1, 1600 / Math.max(img.width, img.height))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(img.width * scale); canvas.height = Math.round(img.height * scale)
+    canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
+    const out = await new Promise<Blob | null>(r => canvas.toBlob(r, 'image/jpeg', 0.8))
+    return out ?? file
+  } catch { return file }
+}
+
 const centsToInput = (c: number) => formatBRL(c).replace('R$ ', '')
 
 export function TransactionForm({ initial, onClose }: { initial?: Transaction; onClose: () => void }) {
-  const { repo, me } = useApp()
+  const { repo, me, files } = useApp()
   const undo = useUndo()
   const accounts = useList<Account>('accounts') ?? []
   const cards = useList<Card>('cards') ?? []
@@ -39,6 +53,10 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
   /** Necessidade/Desejo só deste lançamento; undefined = segue a categoria. */
   const [groupOverride, setGroupOverride] = useState(initial?.group)
   const [item, setItem] = useState(initial?.item ?? '')
+  const [receipt, setReceipt] = useState(initial?.receipt)
+  const [newFile, setNewFile] = useState<File>()
+  const [preview, setPreview] = useState<{ url: string; mime: string }>()
+  const [fileMsg, setFileMsg] = useState<string>()
   const [note, setNote] = useState(initial?.note ?? '')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -70,6 +88,22 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
     setErrors(errs)
     if (Object.keys(errs).length) return
 
+    // Comprovante: envia o novo ao Drive; o tirado vai para a lixeira do Drive.
+    let receiptField: Transaction['receipt'] = receipt
+    if (newFile) {
+      try {
+        const blob = await shrinkImage(newFile)
+        const fileId = await files.upload(`comprovante-${date}-${(note || 'lancamento').slice(0, 40)}.${blob.type === 'image/jpeg' ? 'jpg' : newFile.name.split('.').pop()}`, blob)
+        receiptField = { fileId, name: newFile.name, mime: blob.type || newFile.type }
+      } catch {
+        // Não salva ainda: a pessoa decide se salva sem o comprovante.
+        setNewFile(undefined)
+        setFileMsg('O comprovante não foi enviado (sem internet ou sem login). Toque em Salvar de novo para salvar sem ele e anexe depois.')
+        return
+      }
+    }
+    if (initial?.receipt && initial.receipt.fileId !== receiptField?.fileId) void files.remove(initial.receipt.fileId).catch(() => {})
+
     const base: TransactionDraft = {
       kind, amountCents: cents!, date, categoryId, profileId: initial?.profileId ?? me,
       ...(accountId ? { accountId } : {}), ...(cardId ? { cardId } : {}), ...(note.trim() ? { note: note.trim() } : {}),
@@ -88,6 +122,7 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
       ...(kind === 'despesa' && groupOverride && groupOverride !== autoGroup ? { group: groupOverride } : {}),
     }
     Object.assign(base, groupFields)
+    if (receiptField) base.receipt = receiptField
     const paidFields = cardId || isPayment ? {}
       : isPaid ? (paidDate && paidDate !== date ? { paidDate } : {})
       : { pending: true as const }
@@ -104,6 +139,7 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
       delete next.pending; delete next.paidDate
       if (!base.group) delete next.group
       if (!base.item) delete next.item
+      if (!base.receipt) delete next.receipt
       Object.assign(next, paidFields)
       if (!cardId) { delete next.cardId; delete next.invoiceMonth }
       if (!accountId) delete next.accountId
@@ -281,6 +317,30 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
       <div className="field">
         <label htmlFor="tx-obs">Observação</label>
         <input id="tx-obs" value={note} onChange={e => setNote(e.target.value)} />
+      </div>
+
+      <div className="field">
+        <span className="lbl">Comprovante</span>
+        {receipt ? (
+          <div className="btns" style={{ marginTop: 0 }}>
+            <button className="mini" onClick={async () => {
+              try { const b = await files.open(receipt.fileId); setPreview({ url: URL.createObjectURL(b), mime: receipt.mime }) }
+              catch { setFileMsg('Não deu para abrir o comprovante agora (sem internet ou sem login).') }
+            }}>Ver comprovante</button>
+            <button className="mini" onClick={() => { setReceipt(undefined); setPreview(undefined) }}>Tirar comprovante</button>
+          </div>
+        ) : (
+          <>
+            <label htmlFor="tx-comp" className="hint">Anexar comprovante (foto ou PDF)</label>
+            <input id="tx-comp" type="file" accept="image/*,application/pdf" capture="environment"
+              onChange={e => setNewFile(e.target.files?.[0])} />
+            {newFile && <span className="hint">{newFile.name} — será guardado no Drive ao salvar.</span>}
+          </>
+        )}
+        {preview && (preview.mime.startsWith('image/')
+          ? <img src={preview.url} alt="Comprovante" className="receipt-img" />
+          : <a href={preview.url} target="_blank" rel="noreferrer">Abrir o PDF do comprovante</a>)}
+        {fileMsg && <span className="err saida" role="status">{fileMsg}</span>}
       </div>
 
       <div className="btns">

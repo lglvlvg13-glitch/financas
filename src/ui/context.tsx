@@ -1,11 +1,18 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { DeviceConfig, Repo } from '../data/db'
 import { AuthError, type DriveClient } from '../google/drive'
 import type { Token } from '../google/auth'
 import { syncOnce, startAutoSync, type SyncStatus } from '../sync/sync'
 import { emptyDoc, type Collection, type Meta, type Profile, type ProfileId } from '../domain/types'
 
-export type DriveLike = Pick<DriveClient, 'ensureFolder' | 'findOrCreateFile' | 'download' | 'upload'>
+export type DriveLike = Pick<DriveClient, 'ensureFolder' | 'findOrCreateFile' | 'download' | 'upload' | 'uploadBlob' | 'downloadBlob' | 'trash'>
+
+/** Comprovantes guardados no Drive. Falha com AuthError (entrar de novo) ou NetworkError (sem internet). */
+export interface Files {
+  upload(name: string, blob: Blob): Promise<string>
+  open(fileId: string): Promise<Blob>
+  remove(fileId: string): Promise<void>
+}
 
 export interface AppDeps {
   repo: Repo
@@ -21,6 +28,7 @@ interface Ctx {
   signIn: () => Promise<void>
   syncNow: () => Promise<void>
   setMe: (p: ProfileId) => Promise<void>
+  files: Files
 }
 
 const AppCtx = createContext<Ctx | null>(null)
@@ -104,8 +112,18 @@ export function AppProvider({ deps, children }: { deps: AppDeps; children: React
 
   const setMe = useCallback((p: ProfileId) => repo.setDevice({ profileId: p }), [repo])
 
+  const folderId = device?.folderId
+  const files = useMemo<Files>(() => ({
+    upload: async (name, blob) => {
+      if (!folderId) throw new Error('Pasta do Drive ainda não configurada')
+      return drive.uploadBlob(folderId, name, blob)
+    },
+    open: id => drive.downloadBlob(id),
+    remove: id => drive.trash(id),
+  }), [drive, folderId])
+
   return (
-    <AppCtx.Provider value={{ repo, device, me: device?.profileId ?? 'u1', syncStatus, signIn, syncNow, setMe }}>
+    <AppCtx.Provider value={{ repo, device, me: device?.profileId ?? 'u1', syncStatus, signIn, syncNow, setMe, files }}>
       {children}
     </AppCtx.Provider>
   )

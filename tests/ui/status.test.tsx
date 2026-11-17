@@ -149,3 +149,26 @@ test('em Categorias dá para mudar a classificação de cada item', async () => 
     expect(c?.items?.find(i => i.name === 'Lanches e cafés')?.group).toBe('necessidade')
   })
 })
+
+test('anexar foto do comprovante, ver e tirar', async () => {
+  const s = await ready()
+  if (!URL.createObjectURL) URL.createObjectURL = () => 'blob:x'
+  if (!URL.revokeObjectURL) URL.revokeObjectURL = () => {}
+  const dlg = await openNew(s.user)
+  await s.user.type(within(dlg).getByLabelText('Valor (R$)'), '45')
+  await s.user.selectOptions(within(dlg).getByLabelText('Categoria'), 'cat-saude')
+  await s.user.selectOptions(within(dlg).getByLabelText('Onde'), 'a:a1')
+  await s.user.upload(within(dlg).getByLabelText('Anexar comprovante (foto ou PDF)'), new File([new Uint8Array([1, 2])], 'nota.jpg', { type: 'image/jpeg' }))
+  await s.user.click(within(dlg).getByRole('button', { name: 'Salvar' }))
+  await waitFor(async () => expect((await s.repo.list<Transaction>('transactions'))[0]?.receipt?.fileId).toBe('B1'))
+  expect(s.drive.blobs.size).toBe(1)
+
+  await s.user.click(await screen.findByRole('button', { name: /Saúde e bem-estar/ }))
+  const edit = await screen.findByRole('dialog')
+  await s.user.click(within(edit).getByRole('button', { name: 'Ver comprovante' }))
+  expect(await within(edit).findByRole('img', { name: 'Comprovante' })).toBeInTheDocument()
+  await s.user.click(within(edit).getByRole('button', { name: 'Tirar comprovante' }))
+  await s.user.click(within(edit).getByRole('button', { name: 'Salvar' }))
+  await waitFor(async () => expect((await s.repo.list<Transaction>('transactions'))[0].receipt).toBeUndefined())
+  expect(s.drive.blobs.size).toBe(0)
+})

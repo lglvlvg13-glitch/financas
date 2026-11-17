@@ -83,4 +83,35 @@ export class DriveClient {
       body: JSON.stringify(doc),
     })
   }
+
+  /** Arquivo binário (foto ou PDF de comprovante) na pasta do app. */
+  async uploadBlob(folderId: string, name: string, blob: Blob): Promise<string> {
+    const boundary = 'financas' + Math.random().toString(36).slice(2)
+    const meta = JSON.stringify({ name, parents: [folderId], mimeType: blob.type || 'application/octet-stream' })
+    const body = new Blob([
+      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n`,
+      `--${boundary}\r\nContent-Type: ${blob.type || 'application/octet-stream'}\r\n\r\n`,
+      blob,
+      `\r\n--${boundary}--`,
+    ])
+    const res = await this.req(`${UPLOAD}/files?uploadType=multipart&fields=id`, {
+      method: 'POST',
+      headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+      body,
+    })
+    return ((await res.json()) as { id: string }).id
+  }
+
+  async downloadBlob(fileId: string): Promise<Blob> {
+    return (await this.req(`${API}/files/${fileId}?alt=media`)).blob()
+  }
+
+  /** Lixeira do Drive (recuperável por 30 dias), nunca exclusão definitiva. */
+  async trash(fileId: string): Promise<void> {
+    await this.req(`${API}/files/${fileId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trashed: true }),
+    })
+  }
 }

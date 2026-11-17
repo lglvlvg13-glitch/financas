@@ -84,3 +84,23 @@ test('403 de permissão pede login', async () => {
   const f = fakeFetch([{ status: 403, body: { error: { errors: [{ reason: 'insufficientPermissions' }] } } }])
   await expect(client(f.fn).download('FILE')).rejects.toBeInstanceOf(AuthError)
 })
+
+test('envia comprovante como arquivo na pasta do app (multipart com o binário)', async () => {
+  const f = fakeFetch([{ body: { id: 'R1' } }])
+  const blob = new Blob([new Uint8Array([1, 2, 3])], { type: 'image/jpeg' })
+  expect(await client(f.fn).uploadBlob('FOLDER', 'comprovante.jpg', blob)).toBe('R1')
+  expect(f.calls[0].url).toContain('uploadType=multipart')
+  const body = f.calls[0].init?.body as Blob
+  const text = await body.text()
+  expect(text).toContain('"parents":["FOLDER"]')
+  expect(text).toContain('Content-Type: image/jpeg')
+})
+
+test('baixa e manda comprovante para a lixeira', async () => {
+  const f = fakeFetch([{ body: { ok: 1 } }, { body: {} }])
+  await client(f.fn).downloadBlob('R1')
+  expect(f.calls[0].url).toContain('/files/R1?alt=media')
+  await client(f.fn).trash('R1')
+  expect(f.calls[1].init?.method).toBe('PATCH')
+  expect(JSON.parse(String(f.calls[1].init?.body))).toEqual({ trashed: true })
+})

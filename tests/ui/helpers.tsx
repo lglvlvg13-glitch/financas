@@ -13,6 +13,10 @@ export class FakeDrive implements DriveLike {
   async findOrCreateFile() { return 'FILE' }
   async download() { return structuredClone(this.file) }
   async upload(_id: string, doc: DataDoc) { this.file = structuredClone(doc) }
+  blobs = new Map<string, Blob>()
+  async uploadBlob(_folder: string, _name: string, blob: Blob) { const id = `B${this.blobs.size + 1}`; this.blobs.set(id, blob); return id }
+  async downloadBlob(id: string) { const b = this.blobs.get(id); if (!b) throw new Error('Arquivo não encontrado'); return b }
+  async trash(id: string) { this.blobs.delete(id) }
 }
 
 /** Monta o app com Google e Drive falsos. `ready` = já configurado e com perfil escolhido. */

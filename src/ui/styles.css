@@ -297,3 +297,4 @@ p { margin: 0 0 12px; }
 .trend { font-size: 12px; font-weight: 700; margin-top: 2px; }
 .trend.up { color: #8a5a00; }
 .trend.down { color: var(--entrada); }
+.receipt-img { max-width: 100%; max-height: 360px; border-radius: var(--raio-p); border: 1px solid var(--linha); margin-top: 8px; }

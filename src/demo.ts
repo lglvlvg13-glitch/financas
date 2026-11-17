@@ -11,6 +11,10 @@ export class DemoDrive implements DriveLike {
   async findOrCreateFile() { return 'DEMO' }
   async download() { return structuredClone(this.file) }
   async upload(_id: string, doc: DataDoc) { this.file = structuredClone(doc) }
+  blobs = new Map<string, Blob>()
+  async uploadBlob(_folder: string, _name: string, blob: Blob) { const id = `B${this.blobs.size + 1}`; this.blobs.set(id, blob); return id }
+  async downloadBlob(id: string) { const b = this.blobs.get(id); if (!b) throw new Error('Arquivo não encontrado'); return b }
+  async trash(id: string) { this.blobs.delete(id) }
 }
 
 /** Dados de exemplo, gravados só na primeira abertura deste navegador: o ano até hoje, com contas pagas, previstas e atrasadas. */
