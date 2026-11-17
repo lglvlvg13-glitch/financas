@@ -38,8 +38,8 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
     return () => clearInterval(t)
   }, [waiting])
 
+  // A digital só é pedida com um toque (iPhone não deixa abrir sozinha).
   const tryBio = async () => { if (lock.credentialId && await verifyBiometrics(lock.credentialId)) onUnlock() }
-  useEffect(() => { if (lock.credentialId) void tryBio() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -66,7 +66,7 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
           <button className="btn" type="submit" disabled={waiting || pin.length < 4}>Desbloquear</button>
           {lock.credentialId && <button className="btn sec" type="button" onClick={tryBio}>Usar digital</button>}
         </div>
-        <p className="hint" style={{ marginTop: 18 }}>Esqueceu o PIN? Os dados estão no Google Drive da família: apague os dados do app nas configurações do navegador e entre de novo com a conta Google.</p>
+        <p className="hint" style={{ marginTop: 18 }}>Esqueceu o PIN? Os dados ficam no Google Drive da família. Em outro aparelho, confira se tudo já sincronizou; depois apague os dados deste site nas configurações do navegador e entre de novo com a conta Google. O que foi lançado neste aparelho e ainda não sincronizou se perde.</p>
       </form>
     </main>
   )

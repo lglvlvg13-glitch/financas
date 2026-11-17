@@ -341,3 +341,4 @@ p { margin: 0 0 12px; }
 }
 :root[data-theme] body, body { background: var(--papel); }
 .tag.mix { background: var(--suave-2); color: var(--tinta-2); }
+.review { background: var(--aviso-bg); color: var(--aviso-fg); border-radius: var(--raio-p); padding: 6px 10px; margin: 0 0 8px; }

@@ -5,7 +5,7 @@ import { useUndo } from './UndoToast'
 import { formatBRL } from '../domain/money'
 import { addMonths, monthOf, today } from '../domain/dates'
 import { invoiceMonthFor } from '../domain/invoice'
-import { parseCsv, parseOfx, toDrafts, type DraftRow, type ImportTarget } from '../domain/importer'
+import { decodeStatement, importId, parseCsv, parseOfx, toDrafts, type DraftRow, type ImportTarget } from '../domain/importer'
 import type { Account, Card, Category, ProfileId, Transaction } from '../domain/types'
 
 /** Importar o extrato da conta ou a fatura do cartão (OFX ou CSV exportado pelo banco). */
@@ -33,7 +33,7 @@ export function Import({ onDone }: { onDone: () => void }) {
     setError(undefined); setRows(undefined)
     const t = target()
     if (!t) { setError('Escolha primeiro para onde vão os lançamentos.'); return }
-    const text = await file.text()
+    const text = decodeStatement(await file.arrayBuffer())
     const parsed = /<STMTTRN>/i.test(text) ? parseOfx(text) : parseCsv(text)
     if (parsed.length === 0) {
       setError('Não encontrei lançamentos nesse arquivo. Exporte o extrato do banco em OFX ou CSV (com colunas de data, descrição e valor) e tente de novo.')
@@ -49,7 +49,8 @@ export function Import({ onDone }: { onDone: () => void }) {
     const drafts = toDrafts(parsed, { target: target(month)!, profileId: who, existing: txs, history: txs })
     const usable = card ? parsed.filter(r => r.amountCents > 0).length : parsed.filter(r => r.amountCents !== 0).length
     setSkipped(usable - drafts.length)
-    setRows(drafts.map(d => ({ ...d, on: true })))
+    // Pagamento de fatura e transferências entre contas vêm desmarcados: contariam o dinheiro duas vezes.
+    setRows(drafts.map(d => ({ ...d, on: !d.review })))
   }
 
   const update = (i: number, patch: Partial<Transaction>) =>
@@ -62,7 +63,7 @@ export function Import({ onDone }: { onDone: () => void }) {
     const ids: string[] = []
     try {
       for (const r of chosen) {
-        const d = { ...r.draft, profileId: who, ...(card ? { invoiceMonth } : {}) }
+        const d = { ...r.draft, id: importId(r.key), profileId: who, ...(card ? { invoiceMonth } : {}) }
         ids.push((await repo.put<Transaction>('transactions', d, me)).id)
       }
     } finally { setBusy(false) }
@@ -132,6 +133,8 @@ export function Import({ onDone }: { onDone: () => void }) {
                         {d.kind === 'receita' ? '+' : '−'}{formatBRL(d.amountCents)}
                       </span>
                     </label>
+                    {r.review === 'fatura' && <p className="hint review">Pagamento de fatura: as compras já entram pela fatura do cartão. Para registrar o pagamento, use "Pagar fatura" em Cartões.</p>}
+                    {r.review === 'transferencia' && <p className="hint review">Parece transferência entre contas de vocês ou aplicação. Se for dinheiro guardado, importe e mude o tipo para Investimento depois; se for só troca de conta, deixe de fora.</p>}
                     <div className="range">
                       <div className="field" style={{ marginBottom: 0 }}>
                         <label htmlFor={`imp-cat-${i}`}>Categoria</label>

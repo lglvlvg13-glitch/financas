@@ -150,3 +150,21 @@ test('editar "todas as parcelas" de compra lançada pelo extrato não recria as 
   await waitFor(async () => expect((await s.repo.list<Transaction>('transactions')).every(t => t.amountCents === 12000)).toBe(true))
   expect((await s.repo.list<Transaction>('transactions')).map(t => t.installment!.n).sort()).toEqual([10, 9].sort())
 })
+
+test('comprovante de uma parcela fica salvo; tirar de uma não apaga o arquivo das outras', async () => {
+  const s = await setup({ ready: true })
+  await s.repo.put<Card>('cards', { id: 'k1', name: 'Visa', limitCents: 500000, closingDay: 5, dueDay: 15 }, 'u1')
+  const { buildInstallments } = await import('../../src/domain/invoice')
+  const card = (await s.repo.get<Card>('cards', 'k1'))!
+  for (const p of buildInstallments({ kind: 'despesa', amountCents: 30000, date: D, categoryId: 'cat-lazer', profileId: 'u1', cardId: 'k1', note: 'TV' }, card, 3, 'g1')) {
+    await s.repo.put<Transaction>('transactions', { ...p, receipt: { fileId: 'B9', name: 'nota.jpg', mime: 'image/jpeg' } }, 'u1')
+  }
+  s.drive.blobs.set('B9', new Blob(['x']))
+  await s.user.click(await screen.findByRole('button', { name: 'Lançamentos' }))
+  await s.user.click(await screen.findByRole('button', { name: /TV/ }))
+  const dlg = await screen.findByRole('dialog')
+  await s.user.click(within(dlg).getByRole('button', { name: 'Tirar comprovante' }))
+  await s.user.click(within(dlg).getByRole('button', { name: 'Salvar' }))
+  await waitFor(async () => expect((await s.repo.list<Transaction>('transactions')).filter(t => t.receipt)).toHaveLength(2))
+  expect(s.drive.blobs.has('B9')).toBe(true)
+})

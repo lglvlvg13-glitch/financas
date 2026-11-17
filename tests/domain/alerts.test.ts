@@ -37,3 +37,13 @@ test('arquivo de calendário com lembrete na véspera', () => {
   expect(ics).toContain('SUMMARY:Pagar Energia — R$ 287\\,40')
   expect(ics).toContain('TRIGGER:-PT15H')
 })
+
+test('conta vencida e não paga continua na lista, marcada como atrasada', () => {
+  const u = upcoming({ transactions: [tx({ pending: true, note: 'Energia', date: '2026-11-10' })], categories: cats, cards: [] }, '2026-11-16', 7)
+  expect(u).toEqual([expect.objectContaining({ label: 'Energia', overdue: true })])
+})
+
+test('calendário escapa barra e quebra de linha', () => {
+  const ics = toIcs([{ label: 'A\\B\nC', date: '2026-11-18', cents: 100, kind: 'pagar', id: 'x' }])
+  expect(ics).toContain('A\\\\B\\nC')
+})

@@ -7,12 +7,15 @@ const pad = (n: number) => String(n).padStart(2, '0')
 
 /** "−1.234,56", "1234.56", "-2200.00", "R$ 12,50" → centavos. */
 function toCents(raw: string): number | null {
-  let s = raw.replace(/R\$|\s/g, '').trim()
+  let s = raw.replace(/R\$|\s/g, '').trim().toUpperCase()
   if (!s) return null
-  const neg = /^-|^\(.*\)$|-$/.test(s)
+  // "50,00 D" (débito) / "80,00 C" (crédito), usado por alguns bancos.
+  let neg = /^-|^\(.*\)$|-$/.test(s)
+  if (/D$/.test(s)) { neg = true; s = s.slice(0, -1) } else if (/C$/.test(s)) s = s.slice(0, -1)
   s = s.replace(/[()\-+]/g, '')
   const lastComma = s.lastIndexOf(','), lastDot = s.lastIndexOf('.')
   if (lastComma > lastDot) s = s.replace(/\./g, '').replace(',', '.')
+  else if (lastComma < 0 && /^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '') // "1.500" = mil e quinhentos
   else s = s.replace(/,/g, '')
   if (!/^\d+(\.\d+)?$/.test(s)) return null
   const v = Math.round(parseFloat(s) * 100)
@@ -24,7 +27,7 @@ function toDate(raw: string): string | null {
   const s = raw.trim()
   let m = /^(\d{4})-?(\d{2})-?(\d{2})/.exec(s)
   if (m) return `${m[1]}-${m[2]}-${m[3]}`
-  m = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})$/.exec(s)
+  m = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})(\s|$)/.exec(s)
   if (m) {
     const y = m[3].length === 2 ? `20${m[3]}` : m[3]
     return `${y}-${pad(Number(m[2]))}-${pad(Number(m[1]))}`
@@ -35,6 +38,8 @@ function toDate(raw: string): string | null {
 /** OFX (SGML ou XML), o formato que quase todo banco brasileiro exporta. */
 export function parseOfx(text: string): BankRow[] {
   const out: BankRow[] = []
+  // Fatura de cartão em OFX traz compras negativas; aqui compra fica positiva, como no CSV das faturas.
+  const isCard = /<CCSTMTRS>|<CREDITCARDMSGSRSV1>/i.test(text)
   const tag = (block: string, name: string) => {
     const m = new RegExp(`<${name}>([^<\\r\\n]*)`, 'i').exec(block)
     return m ? m[1].trim() : ''
@@ -46,9 +51,15 @@ export function parseOfx(text: string): BankRow[] {
     if (!date || cents === null) continue
     const description = (tag(body, 'MEMO') || tag(body, 'NAME') || 'Sem descrição').replace(/\s+/g, ' ')
     const bankId = tag(body, 'FITID')
-    out.push({ date, amountCents: cents, description, ...(bankId ? { bankId } : {}) })
+    out.push({ date, amountCents: isCard ? -cents : cents, description, ...(bankId ? { bankId } : {}) })
   }
   return out
+}
+
+/** Lê o arquivo como UTF-8; se não for UTF-8 válido (OFX costuma vir em Windows-1252), usa Windows-1252. */
+export function decodeStatement(buf: ArrayBuffer): string {
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(buf) }
+  catch { return new TextDecoder('windows-1252').decode(buf) }
 }
 
 function splitLine(line: string, sep: string): string[] {
@@ -77,6 +88,7 @@ export function parseCsv(text: string): BankRow[] {
   const iDate = find('DATA', 'DATE', 'LANCAMENTO')
   const iDesc = find('DESCRI', 'HISTORICO', 'TITLE', 'TITULO', 'ESTABELECIMENTO', 'LANCAMENTO DETALHE', 'MEMO')
   const iVal = find('VALOR', 'AMOUNT', 'QUANTIA')
+  const iId = cols.findIndex(c => c === 'ID' || c.includes('IDENTIFICADOR'))
   if (iDate < 0 || iVal < 0) return []
   const out: BankRow[] = []
   for (const line of lines.slice(1)) {
@@ -84,7 +96,8 @@ export function parseCsv(text: string): BankRow[] {
     const date = toDate(c[iDate] ?? '')
     const cents = toCents(c[iVal] ?? '')
     if (!date || cents === null) continue
-    out.push({ date, amountCents: cents, description: (iDesc >= 0 ? c[iDesc] : '') || 'Sem descrição' })
+    const bankId = iId >= 0 ? c[iId] : ''
+    out.push({ date, amountCents: cents, description: (iDesc >= 0 ? c[iDesc] : '') || 'Sem descrição', ...(bankId ? { bankId } : {}) })
   }
   return out
 }
@@ -140,21 +153,44 @@ export function suggestCategory(description: string, kind: 'receita' | 'despesa'
 
 export type ImportTarget = { accountId: string } | { cardId: string; invoiceMonth: string }
 
-/** Identidade da linha importada: id do banco, ou data+valor+descrição. Evita importar duas vezes. */
-export function importKey(scope: string, r: BankRow): string {
-  return `${scope}|${r.bankId ?? `${r.date}|${r.amountCents}|${norm(r.description)}`}`
+/** Identidade da linha importada: id do banco, ou data+valor+descrição (+ nº da repetição no arquivo).
+ *  Evita importar duas vezes, sem perder duas linhas iguais de verdade (ex.: dois Pix de R$ 10 no mesmo dia). */
+export function importKey(scope: string, r: BankRow, occurrence = 1): string {
+  return `${scope}|${r.bankId ?? `${r.date}|${r.amountCents}|${norm(r.description)}`}${occurrence > 1 ? `#${occurrence}` : ''}`
 }
 
-export interface DraftRow { row: BankRow; draft: TransactionDraft; key: string }
+/** Id do lançamento importado, derivado da linha: se os dois celulares importarem o mesmo extrato,
+ *  os registros têm o mesmo id e a sincronização fica com um só. */
+export function importId(key: string): string {
+  let h1 = 0x811c9dc5, h2 = 0x01000193
+  for (let i = 0; i < key.length; i++) {
+    const c = key.charCodeAt(i)
+    h1 = Math.imul(h1 ^ c, 16777619) >>> 0
+    h2 = Math.imul(h2 ^ c, 2246822519) >>> 0
+  }
+  return `imp-${h1.toString(36)}${h2.toString(36)}`
+}
+
+/** Linha que pede conferência: já entra por outro caminho ou pode não ser despesa. */
+export type Review = 'fatura' | 'transferencia'
+const PAYS_INVOICE = /PAG(AMEN)?TO?\b.*FATURA|PAG\.? FATURA|FATURA CART|PAGTO CART/
+const TRANSFER = /TRANSF.*(ENTRE|MESMA|PROPRIA)|ENTRE CONTAS|APLICACAO|APLIC\b|RESGATE|\bCDB\b|POUPANCA|INVEST/
+
+export interface DraftRow { row: BankRow; draft: TransactionDraft; key: string; review?: Review }
 
 /** Linhas do extrato → lançamentos prontos para revisar. Linhas já importadas ficam de fora.
  *  Conta: negativo = despesa, positivo = receita. Fatura: positivo = compra; negativo (estorno, pagamento) fica de fora. */
 export function toDrafts(rows: BankRow[], o: { target: ImportTarget; profileId: ProfileId; existing: Transaction[]; history: Transaction[] }): DraftRow[] {
   const scope = 'accountId' in o.target ? `acc:${o.target.accountId}` : `card:${o.target.cardId}`
-  const seen = new Set(o.existing.filter(t => !t.deletedAt && t.importKey).map(t => t.importKey!))
+  // Inclui as apagadas: uma linha excluída de propósito não volta ao importar um extrato que a repete.
+  const seen = new Set(o.existing.filter(t => t.importKey).map(t => t.importKey!))
+  const count = new Map<string, number>()
   const out: DraftRow[] = []
   for (const row of rows) {
-    const key = importKey(scope, row)
+    const base = importKey(scope, row)
+    const n = (count.get(base) ?? 0) + 1
+    count.set(base, n)
+    const key = row.bankId ? base : importKey(scope, row, n)
     if (seen.has(key)) continue
     seen.add(key)
     if ('cardId' in o.target) {
@@ -168,7 +204,9 @@ export function toDrafts(rows: BankRow[], o: { target: ImportTarget; profileId: 
       if (row.amountCents === 0) continue
       const kind = row.amountCents < 0 ? 'despesa' : 'receita'
       const s = suggestCategory(row.description, kind, o.history, o.profileId)
-      out.push({ row, key, draft: {
+      const d = norm(row.description)
+      const review: Review | undefined = kind === 'despesa' && PAYS_INVOICE.test(d) ? 'fatura' : TRANSFER.test(d) ? 'transferencia' : undefined
+      out.push({ row, key, ...(review ? { review } : {}), draft: {
         kind, amountCents: Math.abs(row.amountCents), date: row.date, categoryId: s.categoryId, ...(s.item ? { item: s.item } : {}),
         profileId: o.profileId, accountId: o.target.accountId, note: row.description, importKey: key,
       } })

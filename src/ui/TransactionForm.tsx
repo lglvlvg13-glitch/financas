@@ -102,7 +102,12 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
         return
       }
     }
-    if (initial?.receipt && initial.receipt.fileId !== receiptField?.fileId) void files.remove(initial.receipt.fileId).catch(() => {})
+    // O arquivo antigo só vai para a lixeira se nenhum outro lançamento (ex.: as outras parcelas) ainda o usa.
+    if (initial?.receipt && initial.receipt.fileId !== receiptField?.fileId) {
+      const touched = new Set(scope === 'todas' ? group.map(t => t.id) : [initial.id])
+      const stillUsed = allTx.some(t => !touched.has(t.id) && t.receipt?.fileId === initial.receipt!.fileId)
+      if (!stillUsed) void files.remove(initial.receipt.fileId).catch(() => {})
+    }
 
     const base: TransactionDraft = {
       kind, amountCents: cents!, date, categoryId, profileId: initial?.profileId ?? me,
@@ -110,7 +115,8 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
     }
     function withGroup(t: Transaction): Transaction {
       const out = { ...t }
-      delete out.group; delete out.item
+      delete out.group; delete out.item; delete out.receipt
+      if (receiptField) out.receipt = receiptField
       return Object.assign(out, groupFields)
     }
     // Situação (só fora do cartão: compra no cartão segue a fatura).
@@ -151,8 +157,9 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
     } else {
       let recurrenceId: string | undefined
       if (repeat) {
-        const { date: _d, ...template } = base
-        void _d
+        // O comprovante é deste lançamento, não dos próximos meses.
+        const { date: _d, receipt: _r, ...template } = base
+        void _d; void _r
         const r = await repo.put<Recurrence>('recurrences', {
           template, dayOfMonth: dayOf(date), startMonth: monthOf(date),
           ...(nMonths ? { endMonth: addMonths(monthOf(date), nMonths - 1) } : {}),

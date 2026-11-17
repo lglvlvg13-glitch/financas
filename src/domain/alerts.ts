@@ -4,25 +4,25 @@ import { dueDateFor, invoiceSummary } from './invoice'
 import { formatBRL } from './money'
 import { competenceDate } from './status'
 
-export interface Due { id: string; label: string; date: string; cents: number; kind: 'pagar' | 'receber' }
+export interface Due { id: string; label: string; date: string; cents: number; kind: 'pagar' | 'receber'; overdue?: boolean }
 
-/** Contas a pagar/receber e faturas abertas que vencem de hoje até `days` dias. */
+/** Contas a pagar/receber e faturas abertas que vencem até `days` dias, mais as já vencidas e não pagas. */
 export function upcoming(data: SummaryData, today: string, days = 7): Due[] {
   const until = addDays(today, days)
   const out: Due[] = []
   for (const t of data.transactions) {
     if (t.deletedAt || !t.pending || t.cardId || t.cardPayment) continue
-    if (t.date < today || t.date > until) continue
-    out.push({ id: t.id, label: t.note ?? t.item ?? 'Conta', date: t.date, cents: t.amountCents, kind: t.kind === 'receita' ? 'receber' : 'pagar' })
+    if (t.date > until) continue
+    out.push({ id: t.id, label: t.note ?? t.item ?? 'Conta', date: t.date, cents: t.amountCents, kind: t.kind === 'receita' ? 'receber' : 'pagar', ...(t.date < today ? { overdue: true } : {}) })
   }
   for (const card of data.cards) {
     if (card.deletedAt) continue
-    for (let m = addMonths(monthOf(today), -1); m <= addMonths(monthOf(until), 1); m = addMonths(m, 1)) {
+    for (let m = addMonths(monthOf(today), -12); m <= addMonths(monthOf(until), 1); m = addMonths(m, 1)) {
       const due = dueDateFor(m, card)
-      if (due < today || due > until) continue
+      if (due > until) continue
       const s = invoiceSummary(card, m, data.transactions)
       const open = s.totalCents - s.paidCents
-      if (open > 0) out.push({ id: `${card.id}|${m}`, label: `Fatura ${card.name}`, date: due, cents: open, kind: 'pagar' })
+      if (open > 0) out.push({ id: `${card.id}|${m}`, label: `Fatura ${card.name}`, date: due, cents: open, kind: 'pagar', ...(due < today ? { overdue: true } : {}) })
     }
   }
   return out.sort((a, b) => a.date.localeCompare(b.date) || b.cents - a.cents)
@@ -50,8 +50,8 @@ export function budgetAlerts(data: SummaryData, month: string, _today: string, t
 /** Arquivo .ics para adicionar os vencimentos ao calendário do celular, com lembrete às 9h da véspera. */
 export function toIcs(items: Due[]): string {
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z')
-  const esc = (s: string) => s.replace(/[\;,]/g, m => `\\${m}`)
-  const ev = items.map(d => [
+  const esc = (s: string) => s.replace(/[\\;,]/g, m => `\\${m}`).replace(/\r?\n/g, '\\n')
+  const ev = items.filter(d => !d.overdue).map(d => [
     'BEGIN:VEVENT',
     `UID:${esc(d.id)}-${d.date}@financas-da-familia`,
     `DTSTAMP:${stamp}`,

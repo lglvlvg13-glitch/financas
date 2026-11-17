@@ -43,3 +43,16 @@ test('arquivo que não é extrato mostra o que fazer', async () => {
   await s.user.upload(screen.getByLabelText('Arquivo do extrato (OFX ou CSV)'), new File(['oi'], 'nada.txt', { type: 'text/plain' }))
   expect(await screen.findByRole('alert')).toHaveTextContent(/Não encontrei lançamentos/)
 })
+
+test('importar o mesmo extrato em dois aparelhos não duplica depois de sincronizar', async () => {
+  const { Repo } = await import('../../src/data/db')
+  const { toDrafts, parseCsv, importId } = await import('../../src/domain/importer')
+  const a = new Repo(`imp-a-${Math.random()}`), b = new Repo(`imp-b-${Math.random()}`)
+  for (const repo of [a, b]) {
+    for (const d of toDrafts(parseCsv(CSV), { target: { accountId: 'a1' }, profileId: 'u1', existing: [], history: [] })) {
+      await repo.put<Transaction>('transactions', { ...d.draft, id: importId(d.key) }, 'u1')
+    }
+  }
+  await a.importDoc(await b.exportDoc())
+  expect(await a.list('transactions')).toHaveLength(3)
+})

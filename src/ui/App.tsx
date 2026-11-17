@@ -29,7 +29,7 @@ function Shell() {
     return a === 'novo' ? 'lancamentos' : a === 'importar' ? 'importar' : 'painel'
   })
   const [locked, unlock] = useLockState()
-  useDueNotifications()
+  useDueNotifications(!!device?.profileId && !locked)
   useEffect(() => {
     const theme = device?.theme ?? 'auto'
     document.documentElement.dataset.theme = theme

@@ -58,3 +58,53 @@ test('rascunhos: conta (sinal define tipo) e cartão (fatura escolhida), sem rep
   expect(card).toHaveLength(1)
   expect(card[0].draft).toMatchObject({ cardId: 'k1', invoiceMonth: '2026-11', amountCents: 3990, profileId: 'u2', categoryId: 'cat-lazer' })
 })
+
+test('fatura de cartão em OFX: compras vêm negativas e viram positivas; pagamento fica de fora', () => {
+  const ofx = `<OFX><CREDITCARDMSGSRSV1><CCSTMTTRNRS><CCSTMTRS><BANKTRANLIST>
+<STMTTRN><DTPOSTED>20261102<TRNAMT>-39.90<FITID>C1<MEMO>NETFLIX</STMTTRN>
+<STMTTRN><DTPOSTED>20261103<TRNAMT>1500.00<FITID>C2<MEMO>PAGAMENTO RECEBIDO</STMTTRN>
+</BANKTRANLIST></CCSTMTRS></CCSTMTTRNRS></CREDITCARDMSGSRSV1></OFX>`
+  const d = toDrafts(parseOfx(ofx), { target: { cardId: 'k1', invoiceMonth: '2026-11' }, profileId: 'u1', existing: [], history: [] })
+  expect(d.map(x => [x.draft.note, x.draft.amountCents])).toEqual([['NETFLIX', 3990]])
+})
+
+test('linhas iguais no mesmo arquivo (dois Pix de R$ 10 no mesmo dia) não se perdem', () => {
+  const csv = 'Data;Descrição;Valor\n05/11/2026;Pix Maria;-10,00\n05/11/2026;Pix Maria;-10,00\n'
+  const d = toDrafts(parseCsv(csv), { target: { accountId: 'a1' }, profileId: 'u1', existing: [], history: [] })
+  expect(d).toHaveLength(2)
+  expect(new Set(d.map(x => x.key)).size).toBe(2)
+})
+
+test('coluna Identificador do Nubank vira o id do banco', () => {
+  const csv = 'Data,Valor,Identificador,Descrição\n05/11/2026,-10.00,abc-1,Pix Maria\n'
+  expect(parseCsv(csv)[0].bankId).toBe('abc-1')
+})
+
+test('pagamento de fatura e transferências vêm desmarcados para conferir', () => {
+  const csv = 'Data;Descrição;Valor\n05/11/2026;PAGAMENTO DE FATURA NUBANK;-1500,00\n06/11/2026;TRANSF ENTRE CONTAS;-300,00\n07/11/2026;MERCADO;-50,00\n'
+  const d = toDrafts(parseCsv(csv), { target: { accountId: 'a1' }, profileId: 'u1', existing: [], history: [] })
+  expect(d.map(x => x.review)).toEqual(['fatura', 'transferencia', undefined])
+})
+
+test('linha apagada de propósito não volta ao importar de novo', () => {
+  const rows = parseCsv('Data;Descrição;Valor\n05/11/2026;Padaria;-12,50\n')
+  const key = toDrafts(rows, { target: { accountId: 'a1' }, profileId: 'u1', existing: [], history: [] })[0].key
+  const d = toDrafts(rows, { target: { accountId: 'a1' }, profileId: 'u1', existing: [{ importKey: key, deletedAt: 5 } as Transaction], history: [] })
+  expect(d).toHaveLength(0)
+})
+
+test('valores e datas em formatos comuns de banco', () => {
+  const csv = 'Data;Histórico;Valor\n05/11/2026 10:30;Aluguel;1.500\n06/11/2026;Compra;50,00 D\n07/11/2026;Depósito;80,00 C\n'
+  expect(parseCsv(csv).map(r => [r.date, r.amountCents])).toEqual([['2026-11-05', 150000], ['2026-11-06', -5000], ['2026-11-07', 8000]])
+})
+
+import { importId, decodeStatement } from '../../src/domain/importer'
+test('id do lançamento importado vem da linha: dois celulares geram o mesmo', () => {
+  expect(importId('acc:a1|X1')).toBe(importId('acc:a1|X1'))
+  expect(importId('acc:a1|X1')).not.toBe(importId('acc:a1|X2'))
+})
+
+test('arquivo em Windows-1252 (comum em OFX) é lido com acentos', () => {
+  const bytes = new Uint8Array([0x4d, 0x45, 0x52, 0x43, 0x41, 0x44, 0xc3, 0x4f]) // "MERCADÃO" em 1252 (Ã = 0xC3)... e 'O'
+  expect(decodeStatement(bytes.buffer)).toBe('MERCADÃO')
+})
