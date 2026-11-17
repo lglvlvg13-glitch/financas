@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useApp, useProfiles } from './context'
 import type { Category, Profile, ProfileId } from '../domain/types'
 import { SYNC_TEXT } from './SyncBanner'
+import { LockSettings } from './Lock'
 
 export function Settings({ go }: { go: (page: 'categorias' | 'recorrentes') => void }) {
   const { repo, me, setMe, syncStatus, syncNow } = useApp()
@@ -57,6 +58,8 @@ export function Settings({ go }: { go: (page: 'categorias' | 'recorrentes') => v
         <button className="btn sec" onClick={() => go('categorias')}>Categorias e orçamento</button>
         <button className="btn sec" onClick={() => go('recorrentes')}>Lançamentos recorrentes</button>
       </div>
+
+      <LockSettings />
 
       <h2>Sincronização</h2>
       <p className="muted">{syncStatus ? SYNC_TEXT[syncStatus] : 'Aguardando a primeira sincronização.'}</p>

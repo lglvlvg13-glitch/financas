@@ -5,6 +5,7 @@ import { Settings } from './Settings'
 import { SyncBanner } from './SyncBanner'
 import { UndoProvider } from './UndoToast'
 import { Pages, type Page } from './pages'
+import { LockScreen, useLockState } from './Lock'
 
 const NAV: Array<[Page, string]> = [
   ['painel', 'Painel'],
@@ -20,10 +21,12 @@ const UNDER_MAIS: Page[] = ['contas', 'relatorio', 'ajustes', 'categorias', 'rec
 function Shell() {
   const { device } = useApp()
   const [page, setPage] = useState<Page>('painel')
+  const [locked, unlock] = useLockState()
 
   if (!device) return null
   if (!device.dataFileId) return <Welcome />
   if (!device.profileId) return <WhoAreYou />
+  if (locked) return <LockScreen onUnlock={unlock} />
 
   const navPage: Page = UNDER_MAIS.includes(page) ? 'mais' : page === 'importar' ? 'lancamentos' : page
   return (

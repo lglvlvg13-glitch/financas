@@ -284,3 +284,5 @@ p { margin: 0 0 12px; }
 .import-list li { padding: 12px 16px; }
 .import-list li.off { opacity: .5; }
 .imp-desc { min-width: 0; overflow-wrap: anywhere; }
+.lock { width: min(360px, 100%); }
+.lock input#pin { font-size: 28px; letter-spacing: .4em; text-align: center; }
