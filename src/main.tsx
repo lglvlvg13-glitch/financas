@@ -6,6 +6,7 @@ import { Repo } from './data/db'
 import { DriveClient } from './google/drive'
 import { requestToken } from './google/auth'
 import type { AppDeps } from './ui/context'
+import { keepUpdated } from './pwa'
 
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
 const demo = import.meta.env.VITE_DEMO === '1'
@@ -23,6 +24,7 @@ async function start() {
       makeDrive: () => drive,
     }
   } else {
+    keepUpdated()
     deps = {
       repo: new Repo(),
       requestToken: () => {
