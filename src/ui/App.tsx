@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AppProvider, useApp, type AppDeps } from './context'
 import { Welcome, WhoAreYou } from './Onboarding'
+import { AppMark } from './AppMark'
 import { Settings } from './Settings'
 import { SyncBanner } from './SyncBanner'
 import { UndoProvider } from './UndoToast'
@@ -48,7 +49,7 @@ function Shell() {
   return (
     <div className="shell">
       <div className="tabbar">
-        <div className="brand mark"><i>F</i>Finanças da Família</div>
+        <div className="brand mark"><AppMark className="mark-ico" />Finanças da Família</div>
         <button className="add-btn" aria-label="Novo lançamento" onClick={() => setAdding(true)}>
           <Icon name="plus" size={26} strokeWidth={2.4} /><span className="add-label">Novo lançamento</span>
         </button>
@@ -61,7 +62,7 @@ function Shell() {
         </nav>
       </div>
       <header className="appbar">
-        <span className="mark mobile-only"><i>F</i>Finanças</span>
+        <span className="mark mobile-only"><AppMark className="mark-ico" />Finanças</span>
         <span />
         <button className="who-chip" onClick={() => setPage('ajustes')} aria-label={`${names[me]} neste aparelho. Abrir Ajustes`}>
           <span className="av">{names[me].trim().charAt(0).toUpperCase()}</span>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useApp, useProfiles } from './context'
+import { AppMark } from './AppMark'
 
 export function Welcome() {
   useDarkBar()
@@ -13,7 +14,7 @@ export function Welcome() {
   }
   return (
     <main className="login">
-      <div className="login-brand"><span className="login-mark" aria-hidden="true">F</span>Finanças da Família</div>
+      <div className="login-brand"><AppMark size={36} className="login-mark" />Finanças da Família</div>
       <div className="login-grid">
         <section className="login-copy">
           <h1>O dinheiro da casa, claro para os dois.</h1>
@@ -70,7 +71,7 @@ export function WhoAreYou() {
   return (
     <main className="login">
       <section className="login-copy login-solo">
-        <div className="login-brand"><span className="login-mark" aria-hidden="true">F</span>Finanças da Família</div>
+        <div className="login-brand"><AppMark size={36} className="login-mark" />Finanças da Família</div>
         <h1>Quem é você?</h1>
         <p className="login-lead">Os lançamentos feitos neste aparelho ficam no seu nome. Dá para trocar depois em Ajustes.</p>
         <div className="who-pick">
