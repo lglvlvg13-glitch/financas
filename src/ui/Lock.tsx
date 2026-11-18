@@ -54,7 +54,7 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
   return (
     <main className="welcome">
       <form className="inner lock" onSubmit={submit}>
-        <h1>Finanças da Família</h1>
+        <h1>Provisão</h1>
         <p className="muted">Digite o PIN deste aparelho.</p>
         <div className="field">
           <label htmlFor="pin">PIN</label>

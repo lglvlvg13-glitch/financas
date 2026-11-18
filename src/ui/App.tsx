@@ -49,7 +49,7 @@ function Shell() {
   return (
     <div className="shell">
       <div className="tabbar">
-        <div className="brand mark"><AppMark className="mark-ico" />Finanças da Família</div>
+        <div className="brand mark"><AppMark className="mark-ico" />Provisão</div>
         <button className="add-btn" aria-label="Novo lançamento" onClick={() => setAdding(true)}>
           <Icon name="plus" size={26} strokeWidth={2.4} /><span className="add-label">Novo lançamento</span>
         </button>
@@ -62,7 +62,7 @@ function Shell() {
         </nav>
       </div>
       <header className="appbar">
-        <span className="mark mobile-only"><AppMark className="mark-ico" />Finanças</span>
+        <span className="mark mobile-only"><AppMark className="mark-ico" />Provisão</span>
         <span />
         <button className="who-chip" onClick={() => setPage('ajustes')} aria-label={`${names[me]} neste aparelho. Abrir Ajustes`}>
           <span className="av">{names[me].trim().charAt(0).toUpperCase()}</span>

@@ -32,8 +32,8 @@ export async function registerBiometrics(): Promise<string> {
   const cred = await navigator.credentials.create({
     publicKey: {
       challenge: crypto.getRandomValues(new Uint8Array(32)),
-      rp: { name: 'Finanças da Família' },
-      user: { id: crypto.getRandomValues(new Uint8Array(16)), name: 'familia', displayName: 'Finanças da Família' },
+      rp: { name: 'Provisão' },
+      user: { id: crypto.getRandomValues(new Uint8Array(16)), name: 'familia', displayName: 'Provisão' },
       pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
       authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
       timeout: 60_000,

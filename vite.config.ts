@@ -15,9 +15,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon-192.png', 'icon-512.png'],
       manifest: {
-        name: 'Finanças da Família',
-        short_name: 'Finanças',
-        description: 'Controle financeiro da família, guardado no Google Drive de vocês.',
+        name: 'Provisão — Finanças da família',
+        short_name: 'Provisão',
+        description: 'Quem planeja, provê. Controle financeiro da família, guardado no Google Drive de vocês.',
         lang: 'pt-BR',
         display: 'standalone',
         start_url: base,

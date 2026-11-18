@@ -14,11 +14,11 @@ export function Welcome() {
   }
   return (
     <main className="login">
-      <div className="login-brand"><AppMark size={36} className="login-mark" />Finanças da Família</div>
+      <div className="login-brand"><AppMark size={36} className="login-mark" />Provisão</div>
       <div className="login-grid">
         <section className="login-copy">
-          <h1>O dinheiro da casa, claro para os dois.</h1>
-          <p className="login-lead">Receitas, contas, faturas e orçamento num só lugar — sincronizado entre os celulares da família.</p>
+          <h1>Quem planeja, provê.</h1>
+          <p className="login-lead">Finanças da família: receitas, contas, faturas e orçamento num só lugar, sincronizado entre os celulares da casa.</p>
           <button className="google-btn" onClick={go} disabled={busy}>
             <GoogleG />
             <span>{busy ? 'Entrando…' : 'Entrar com Google'}</span>
@@ -71,7 +71,7 @@ export function WhoAreYou() {
   return (
     <main className="login">
       <section className="login-copy login-solo">
-        <div className="login-brand"><AppMark size={36} className="login-mark" />Finanças da Família</div>
+        <div className="login-brand"><AppMark size={36} className="login-mark" />Provisão</div>
         <h1>Quem é você?</h1>
         <p className="login-lead">Os lançamentos feitos neste aparelho ficam no seu nome. Dá para trocar depois em Ajustes.</p>
         <div className="who-pick">
