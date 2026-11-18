@@ -71,12 +71,12 @@ const CAT: Record<string, [IconName, string]> = {
   'cat-doacoes': ['presente', '#3C9C8E'],
   'cat-emergencias': ['alerta', '#C2493B'],
   'cat-pagamento-fatura': ['cartoes', '#5B6A74'],
-  'cat-salario-u1': ['maleta', '#17955F'],
-  'cat-salario-u2': ['maleta', '#17955F'],
-  'cat-comissoes': ['porcento', '#17955F'],
-  'cat-outras-receitas': ['entrada', '#17955F'],
+  'cat-salario-u1': ['maleta', '#0D8F62'],
+  'cat-salario-u2': ['maleta', '#0D8F62'],
+  'cat-comissoes': ['porcento', '#0D8F62'],
+  'cat-outras-receitas': ['entrada', '#0D8F62'],
 }
-const KIND_COLOR: Record<Category['kind'], string> = { receita: '#17955F', despesa: '#5B6A74', investimento: '#4E6BF5' }
+const KIND_COLOR: Record<Category['kind'], string> = { receita: '#0D8F62', despesa: '#5B6A74', investimento: '#3B6FE0' }
 
 export function catLook(c?: Pick<Category, 'id' | 'kind'>): [IconName, string] {
   if (!c) return ['etiqueta', '#5B6A74']

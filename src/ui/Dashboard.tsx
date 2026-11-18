@@ -79,8 +79,8 @@ export function Dashboard({ go }: { go: (p: Page) => void }) {
   const base = Math.max(inc, out + inv, 1)
   const split = [
     { key: 'Despesas', v: out, color: C.out },
-    { key: 'Investido', v: inv, color: '#7aa2dc' },
-    { key: 'Sobrou', v: left, color: '#5fc29f' },
+    { key: 'Investido', v: inv, color: '#7aa2ff' },
+    { key: 'Sobrou', v: left, color: '#f5c451' },
   ]
 
   // Método neste mês.
@@ -128,9 +128,9 @@ export function Dashboard({ go }: { go: (p: Page) => void }) {
         </div>
         <strong className="hero-value num">{formatBRL(ys.finalCents)}</strong>
         <div className="hero-stats">
-          <span><i style={{ background: '#5fc29f' }} />Entradas <b className="num">{formatBRL(inc)}</b></span>
-          <span><i style={{ background: '#f08b74' }} />Saídas <b className="num">{formatBRL(out)}</b></span>
-          <span><i style={{ background: '#7aa2dc' }} />Investido <b className="num">{formatBRL(inv)}</b></span>
+          <span><i style={{ background: '#4ade80' }} />Entradas <b className="num">{formatBRL(inc)}</b></span>
+          <span><i style={{ background: '#fb7185' }} />Saídas <b className="num">{formatBRL(out)}</b></span>
+          <span><i style={{ background: '#7aa2ff' }} />Investido <b className="num">{formatBRL(inv)}</b></span>
         </div>
         {hasYearData && (
           <>

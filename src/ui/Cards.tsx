@@ -100,7 +100,7 @@ function InvoicePanel({ card, month, txs, onEdit, onPay, onEnter }: {
 }
 
 /** Cor da "face" do cartão, fixa por cartão. */
-const FACES = ['#1d2b31', '#0b474d', '#3b2e5a', '#5a2e3a', '#2d3f6b', '#3d4a2c']
+const FACES = ['#1b2540', '#14306a', '#3b2e5a', '#5a2e3a', '#0f4a3a', '#3d4a2c']
 function faceColor(id: string) {
   let h = 0
   for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0
