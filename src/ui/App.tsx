@@ -35,7 +35,7 @@ function Shell() {
     const theme = device?.theme ?? 'auto'
     document.documentElement.dataset.theme = theme
     const dark = theme === 'escuro' || (theme === 'auto' && window.matchMedia?.('(prefers-color-scheme: dark)').matches)
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#060b1a' : '#f4f6fb')
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0d110a' : '#f5f6f0')
   }, [device?.theme])
 
   if (!device) return null

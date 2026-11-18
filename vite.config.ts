@@ -22,8 +22,8 @@ export default defineConfig({
         display: 'standalone',
         start_url: base,
         scope: base,
-        background_color: '#f4f6fb',
-        theme_color: '#0b1530',
+        background_color: '#f5f6f0',
+        theme_color: '#1f2a12',
         // Atalhos ao segurar o ícone do app no celular.
         shortcuts: [
           { name: 'Novo lançamento', short_name: 'Lançar', url: `${base}?abrir=novo`, icons: [{ src: 'icon-192.png', sizes: '192x192' }] },
