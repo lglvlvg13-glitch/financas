@@ -464,6 +464,11 @@ p { margin: 0 0 12px; }
   border: 1px solid var(--l-linha); backdrop-filter: blur(12px); box-shadow: 0 30px 60px rgba(0, 0, 0, .45);
   transform: rotate(-3deg); animation: art-in .9s cubic-bezier(.2, .8, .2, 1) both;
 }
+.art-card::before {
+  content: ''; position: absolute; top: -1px; left: 26px; right: 26px; height: 1.5px; border-radius: 2px;
+  background: linear-gradient(90deg, transparent, rgba(245, 196, 81, .6) 12%, #f7d27a 38%, rgba(245, 196, 81, .5) 70%, transparent);
+  box-shadow: 0 0 10px rgba(245, 196, 81, .35);
+}
 .art-label { font-size: 13px; color: var(--l-suave); font-weight: 600; }
 .art-total { font-size: 32px; letter-spacing: -0.03em; font-weight: 800; }
 .art-bars { display: flex; align-items: flex-end; gap: 8px; height: 92px; margin-top: 10px; }
