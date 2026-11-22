@@ -1,0 +1,44 @@
+name: APK de teste (Android)
+
+# Gera o Provisão como aplicativo Android (versão de teste) e publica o arquivo
+# na página de versões do GitHub, com link fixo para download.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['android/**', '.github/workflows/apk.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Montar o APK
+        run: gradle -p android assembleDebug --no-daemon
+      - name: Dar nome ao arquivo
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk Provisao-teste.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Provisao-teste
+          path: Provisao-teste.apk
+      - name: Publicar para download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES="Versão de teste do Provisão para Android. Baixe Provisao-teste.apk no celular e permita instalar apps desta fonte."
+          if gh release view apk-teste >/dev/null 2>&1; then
+            gh release upload apk-teste Provisao-teste.apk --clobber
+            gh release edit apk-teste --notes "$NOTES"
+          else
+            gh release create apk-teste Provisao-teste.apk --title "Provisão — versão de teste (Android)" --notes "$NOTES" --prerelease
+          fi
