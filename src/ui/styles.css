@@ -462,6 +462,24 @@ p { margin: 0 0 12px; }
 .pct-input { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
 .pct-input input { width: 84px; text-align: right; }
 
+/* ---------- Manual ---------- */
+.man-list { display: grid; gap: 10px; }
+.man-sec { padding: 0; overflow: hidden; }
+.man-sec summary { list-style: none; cursor: pointer; padding: 16px 18px; font-weight: 800; font-size: 16.5px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.man-sec summary::-webkit-details-marker { display: none; }
+.man-sec summary::after { content: ''; width: 9px; height: 9px; border-right: 2px solid var(--tinta-2); border-bottom: 2px solid var(--tinta-2); transform: rotate(45deg); transition: transform .2s; flex: none; margin-top: -4px; }
+.man-sec[open] summary::after { transform: rotate(-135deg); margin-top: 4px; }
+.man-sec summary:focus-visible { outline: 3px solid var(--foco); outline-offset: -3px; }
+.man-body { padding: 0 18px 18px; font-size: 15px; line-height: 1.55; }
+.man-body h4 { margin: 18px 0 6px; font-size: 15px; }
+.man-body ol, .man-body ul { padding-left: 20px; margin: 8px 0; display: grid; gap: 6px; }
+.man-shot { margin: 14px 0; }
+.man-shot img { display: block; width: 100%; max-width: 330px; height: auto; border-radius: 16px; border: 1px solid var(--linha); box-shadow: 0 6px 18px rgba(28, 36, 20, .12); }
+.man-shot figcaption { margin-top: 8px; font-size: 13.5px; color: var(--tinta-2); }
+.man-faq { margin: 0; display: grid; gap: 4px; }
+.man-faq dt { font-weight: 700; margin-top: 10px; }
+.man-faq dd { margin: 0; color: var(--tinta-2); }
+
 /* ---------- Login (sempre escuro) ---------- */
 .login {
   --l-bg: #0b0f08; --l-tinta: #eff2e6; --l-suave: #a7b096; --l-menta: #a3c46a; --l-ouro: #d9b25c; --l-linha: rgba(239, 242, 230, .1);
