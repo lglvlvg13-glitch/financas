@@ -38,6 +38,7 @@ const P: Record<string, ReactNode> = {
   maleta: <><rect x="3" y="7" width="18" height="13" rx="2.5" /><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18" /></>,
   porcento: <><path d="M19 5 5 19" /><circle cx="7" cy="7" r="2.5" /><circle cx="17" cy="17" r="2.5" /></>,
   entrada: <><path d="M12 4v12m0 0-5-5m5 5 5-5" /><path d="M5 20h14" /></>,
+  alvo: <><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="4.5" /><circle cx="12" cy="12" r=".8" /></>,
   grafico: <><path d="M3 17l6-6 4 4 8-8" /><path d="M15 7h6v6" /></>,
   etiqueta: <><path d="M3 12V4h8l10 10-8 8z" /><circle cx="7.5" cy="8.5" r="1.2" /></>,
 }
