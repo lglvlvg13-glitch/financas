@@ -491,6 +491,11 @@ p { margin: 0 0 12px; }
 .google-btn:focus-visible { outline: 3px solid var(--l-menta); outline-offset: 3px; }
 .google-btn:disabled { opacity: .7; cursor: progress; }
 .login-error { margin: 0; background: rgba(217, 71, 60, .16); color: #ffb4ab; border-radius: 12px; padding: 10px 14px; font-size: 14px; }
+.login-note { display: grid; gap: 10px; background: rgba(240, 180, 74, .14); border: 1px solid rgba(240, 180, 74, .35); color: var(--l-tinta); border-radius: 14px; padding: 12px 14px; font-size: 14px; line-height: 1.5; max-width: 420px; }
+.login-chip { justify-self: start; min-height: 42px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--l-linha); background: rgba(255, 255, 255, .08); color: var(--l-tinta); font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
+.login-chip:hover { background: rgba(255, 255, 255, .14); }
+.login-chip:focus-visible { outline: 3px solid var(--l-menta); outline-offset: 2px; }
+.login-tip { margin: 0; font-size: 13.5px; color: var(--l-suave); max-width: 40ch; }
 .login-trust { display: flex; gap: 10px; align-items: flex-start; margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--l-suave); max-width: 40ch; }
 .login-trust svg { flex: none; margin-top: 1px; color: var(--l-menta); }
 .login-foot { display: flex; justify-content: center; gap: 22px; padding-top: 24px; font-size: 13px; }

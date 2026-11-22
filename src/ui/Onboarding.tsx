@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useApp, useProfiles } from './context'
 import { AppMark } from './AppMark'
+import { useInstall } from './install'
 
 export function Welcome() {
   useDarkBar()
   const { signIn } = useApp()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
+  const install = useInstall()
+  const [copied, setCopied] = useState(false)
+  const copyLink = async () => { try { await navigator.clipboard.writeText(location.href); setCopied(true) } catch { /* sem área de transferência */ } }
   const go = async () => {
     setBusy(true); setError(undefined)
     try { await signIn() } catch (e) { setError(e instanceof Error ? e.message : 'Falha no login') }
@@ -24,6 +28,15 @@ export function Welcome() {
             <span>{busy ? 'Entrando…' : 'Entrar com Google'}</span>
           </button>
           {error && <p className="login-error" role="alert">{error}. Tente de novo.</p>}
+          {install.inApp && (
+            <div className="login-note" role="note">
+              <p style={{ margin: 0 }}><strong>Abra no navegador para entrar.</strong> O Google não permite login dentro de outros apps (Instagram, Facebook…). Toque nos três pontinhos e escolha <b>Abrir no navegador</b>, ou copie o link e cole no Chrome ou no Safari.</p>
+              <button className="login-chip" onClick={() => void copyLink()}>{copied ? 'Link copiado' : 'Copiar link'}</button>
+            </div>
+          )}
+          {!install.installed && !install.inApp && (install.canPrompt
+            ? <button className="login-chip" onClick={() => void install.prompt()}>Instalar o app neste aparelho</button>
+            : install.ios && <p className="login-tip">Para instalar no iPhone: no Safari, toque em <b>Compartilhar</b> e depois em <b>Adicionar à Tela de Início</b>.</p>)}
           <p className="login-trust">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3M6 10h12v10H6z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /></svg>
             Você digita a senha só na página do Google. Os dados ficam no Drive da sua conta.
