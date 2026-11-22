@@ -69,7 +69,7 @@ const CAT: Record<string, [IconName, string]> = {
   'cat-filhos': ['bebe', '#E58A4E'],
   'cat-pets': ['pata', '#A0703A'],
   'cat-familia': ['pessoas', '#B85C8A'],
-  'cat-doacoes': ['presente', '#3C9C8E'],
+  'cat-doacoes': ['coracao', '#B07A3A'],
   'cat-emergencias': ['alerta', '#C2493B'],
   'cat-pagamento-fatura': ['cartoes', '#5B6A74'],
   'cat-salario-u1': ['maleta', '#2F7D32'],

@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useApp, useList } from './context'
+import { useGoals } from './useGoals'
+import { AREAS } from '../domain/goals'
 import { Confirm, Dialog } from './common'
 import { useUndo } from './UndoToast'
 import { formatBRL, parseBRL } from '../domain/money'
@@ -33,6 +35,7 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
   const cards = useList<Card>('cards') ?? []
   const categories = useList<Category>('categories') ?? []
   const allTx = useList<Transaction>('transactions') ?? []
+  const goals = useGoals() ?? []
 
   const group = useMemo(
     () => initial?.installment ? allTx.filter(t => t.installment?.groupId === initial.installment!.groupId) : [],
@@ -58,6 +61,7 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
   const [preview, setPreview] = useState<{ url: string; mime: string }>()
   const [fileMsg, setFileMsg] = useState<string>()
   const [note, setNote] = useState(initial?.note ?? '')
+  const [goal, setGoal] = useState(initial?.goalId ?? '')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [confirmDelete, setConfirmDelete] = useState(false)
 
@@ -115,7 +119,7 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
     }
     function withGroup(t: Transaction): Transaction {
       const out = { ...t }
-      delete out.group; delete out.item; delete out.receipt
+      delete out.group; delete out.item; delete out.receipt; delete out.goalId
       if (receiptField) out.receipt = receiptField
       return Object.assign(out, groupFields)
     }
@@ -123,8 +127,10 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
     const catNow = categories.find(c => c.id === categoryId)
     const itemNow = kind === 'despesa' && item && catNow?.items?.some(x => x.name === item) ? item : undefined
     const autoGroup = catNow?.items?.find(x => x.name === itemNow)?.group ?? catNow?.group ?? 'desejo'
+    const goalNow = kind !== 'receita' && goal ? goal : undefined
     const groupFields = {
       ...(itemNow ? { item: itemNow } : {}),
+      ...(goalNow ? { goalId: goalNow } : {}),
       ...(kind === 'despesa' && groupOverride && groupOverride !== autoGroup ? { group: groupOverride } : {}),
     }
     Object.assign(base, groupFields)
@@ -145,6 +151,7 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
       delete next.pending; delete next.paidDate
       if (!base.group) delete next.group
       if (!base.item) delete next.item
+      if (!base.goalId) delete next.goalId
       if (!base.receipt) delete next.receipt
       Object.assign(next, paidFields)
       if (!cardId) { delete next.cardId; delete next.invoiceMonth }
@@ -284,6 +291,24 @@ export function TransactionForm({ initial, onClose }: { initial?: Transaction; o
           <span className="hint">{groupOverride && groupOverride !== (itemGroup ?? chosen.group ?? 'desejo')
             ? 'Classificação só deste lançamento.'
             : 'Necessidade = despesa fixa, que não dá para cortar. Desejo = dá para cortar ou adiar.'}</span>
+        </div>
+      )}
+
+      {kind !== 'receita' && (goals.some(g => !g.doneAt) || goals.some(g => g.id === goal)) && (
+        <div className="field">
+          <label htmlFor="tx-meta">Meta (opcional)</label>
+          <select id="tx-meta" value={goal} onChange={e => setGoal(e.target.value)}>
+            <option value="">Nenhuma</option>
+            {AREAS.map(a => {
+              const list = goals.filter(g => g.area === a.id && (!g.doneAt || g.id === goal))
+              return list.length > 0 && (
+                <optgroup key={a.id} label={a.name}>
+                  {list.map(g => <option key={g.id} value={g.id}>{g.sub ? `${g.name} (${g.sub})` : g.name}</option>)}
+                </optgroup>
+              )
+            })}
+          </select>
+          <span className="hint">O valor conta no progresso da meta e na área dela no Planejamento.</span>
         </div>
       )}
 

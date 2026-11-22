@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
+import { useGoals } from './useGoals'
 import { useApp, useList, useLive } from './context'
 import { Dialog, MonthNav, dateLabel, useMonth } from './common'
 import { useUndo } from './UndoToast'
@@ -6,19 +7,13 @@ import { useGenerateRange } from './Summary'
 import { Icon } from './Icons'
 import { formatBRL, parseBRL } from '../domain/money'
 import { lastDayOfMonth, today } from '../domain/dates'
-import { AREAS, GENEROSITY_CATEGORY_ID, PLAN_ID, TERMS, areaById, areaPlan, goalId, goalProgress, isGoalId, planPct, termFor,
+import { AREAS, GENEROSITY_CATEGORY_ID, PLAN_ID, TERMS, areaById, areaPlan, goalId, goalProgress, planPct, termFor,
   type Area, type Goal, type Plan, type Term } from '../domain/goals'
 import { SAVINGS_EXPENSE_ID } from '../domain/period'
-import type { Card, Category, Meta, Transaction } from '../domain/types'
+import type { Card, Category, Transaction } from '../domain/types'
 
 const fullDate = (d: string) => `${dateLabel(d)}/${d.slice(0, 4)}`
 const termName = (t: Term) => TERMS.find(x => x.id === t)!.name
-
-/** Metas guardadas nas preferências (ids "goal:…"). */
-export function useGoals(): Goal[] | undefined {
-  const all = useList<Meta>('settings')
-  return useMemo(() => all?.filter(r => isGoalId(r.id)) as Goal[] | undefined, [all])
-}
 
 /** Subáreas de uma área. Necessidades usa as categorias de necessidade da família. */
 export function subsFor(area: Area, categories: Category[]): string[] {
