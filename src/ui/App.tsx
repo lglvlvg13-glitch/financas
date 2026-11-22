@@ -20,7 +20,7 @@ const NAV: Array<[Page, string, IconName]> = [
 ]
 
 /** Telas que ficam dentro de "Mais". */
-const UNDER_MAIS: Page[] = ['planejamento', 'contas', 'relatorio', 'ajustes', 'categorias', 'recorrentes']
+const UNDER_MAIS: Page[] = ['planejamento', 'manual', 'contas', 'relatorio', 'ajustes', 'categorias', 'recorrentes']
 
 function Shell() {
   const { device, me, syncStatus } = useApp()
