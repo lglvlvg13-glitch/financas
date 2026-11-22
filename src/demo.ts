@@ -1,3 +1,4 @@
+import type { Goal } from './domain/goals'
 import type { Repo } from './data/db'
 import type { DriveLike } from './ui/context'
 import { addMonths, clampDay, monthOf, today } from './domain/dates'
@@ -44,6 +45,21 @@ export async function seedDemo(repo: Repo): Promise<void> {
   } as Transaction, 'u1')
   const wobble = (base: number, i: number, amp: number) => Math.round(base + Math.sin(i * 1.7) * amp)
 
+  // Metas do planejamento (5 áreas), com e sem valor.
+  const goal = (g: Omit<Goal, 'updatedAt' | 'updatedBy'>) => repo.put<Goal>('settings', g, 'u1')
+  const endYear = `${year}-12-31`
+  const inMonths = (n: number) => clampDay(addMonths(thisMonth, n), 28)
+  await goal({ id: 'goal:demo-dizimo', name: 'Dízimo do ano', area: 'generosidade', sub: 'Dízimos', term: 'curto', targetCents: 1284000, deadline: endYear })
+  await goal({ id: 'goal:demo-oferta', name: 'Oferta para missões', area: 'generosidade', sub: 'Ofertas', term: 'curto', targetCents: 120000, deadline: inMonths(3) })
+  await goal({ id: 'goal:demo-reserva', name: 'Reserva de 6 meses', area: 'poupancas', sub: 'Reserva de emergência', term: 'medio', targetCents: 3000000, deadline: inMonths(24) })
+  await goal({ id: 'goal:demo-viagem', name: 'Viagem em família', area: 'poupancas', sub: 'Objetivos', term: 'curto', targetCents: 800000, deadline: inMonths(9) })
+  await goal({ id: 'goal:demo-apos', name: 'Aposentadoria tranquila', area: 'investimentos', sub: 'Aposentadoria', term: 'longo', targetCents: 50000000, deadline: `${Number(year) + 25}-12-31` })
+  await goal({ id: 'goal:demo-correr', name: 'Correr 10 km', area: 'desejos', sub: 'Física', term: 'medio', deadline: inMonths(14) })
+  await goal({ id: 'goal:demo-ler', name: 'Ler 12 livros no ano', area: 'desejos', sub: 'Mental', term: 'curto', deadline: endYear })
+  await goal({ id: 'goal:demo-jantar', name: 'Jantar em família toda semana', area: 'desejos', sub: 'Família', term: 'curto', doneAt: clampDay(thisMonth, 1) })
+  await goal({ id: 'goal:demo-amigos', name: 'Encontro com amigos todo mês', area: 'desejos', sub: 'Social', term: 'curto' })
+  await goal({ id: 'goal:demo-escola', name: 'Escola do ano pago em dia', area: 'necessidades', sub: 'Educação e desenvolvimento', term: 'curto', targetCents: 1176000, deadline: endYear })
+
   // Meses anteriores do ano: tudo pago.
   let i = 0
   for (let m = `${year}-01`; m < thisMonth; m = addMonths(m, 1), i++) {
@@ -55,9 +71,11 @@ export async function seedDemo(repo: Repo): Promise<void> {
     await put({ amountCents: wobble(118000, i, 18000), categoryId: 'cat-alimentacao', item: 'Supermercado', date: d(12), profileId: i % 2 ? 'u2' : 'u1' })
     await put({ amountCents: wobble(21000, i + 1, 8000), categoryId: 'cat-alimentacao', item: 'Restaurantes e delivery', date: d(18), profileId: 'u2', cardId: undefined })
     await put({ amountCents: wobble(31000, i + 2, 9000), categoryId: 'cat-transporte', date: d(15), profileId: 'u2', accountId: 'demo-pix', note: 'Combustível' })
-    await put({ amountCents: 98000, categoryId: 'cat-educacao', date: d(25), note: 'Escola' })
+    await put({ amountCents: 98000, categoryId: 'cat-educacao', date: d(25), note: 'Escola', goalId: 'goal:demo-escola' })
     await put({ amountCents: wobble(38000, i + 4, 20000), categoryId: 'cat-lazer', date: d(20), profileId: 'u2', note: 'Passeio' })
-    await put({ kind: 'investimento', amountCents: 50000, categoryId: 'cat-inv-caixinha-1', date: d(6), note: 'Reserva' })
+    await put({ kind: 'investimento', amountCents: 50000, categoryId: 'cat-inv-caixinha-1', date: d(6), note: 'Reserva', goalId: 'goal:demo-reserva' })
+    await put({ amountCents: 107000, categoryId: 'cat-doacoes', item: 'Dízimos', date: d(6), note: 'Dízimo', goalId: 'goal:demo-dizimo' })
+    if (i >= 6) await put({ amountCents: 60000, categoryId: 'cat-poupanca', date: d(8), profileId: 'u2', accountId: 'demo-pix', note: 'Viagem', goalId: 'goal:demo-viagem' })
     if (i % 3 === 0) await put({ kind: 'investimento', amountCents: 30000, categoryId: 'cat-inv-poupanca', date: d(7), profileId: 'u2', accountId: 'demo-pix' })
   }
 
@@ -73,7 +91,9 @@ export async function seedDemo(repo: Repo): Promise<void> {
   await put({ amountCents: 14890, categoryId: 'cat-alimentacao', item: 'Restaurantes e delivery', date: past(7), profileId: 'u2', note: 'Pizza' })
   await put({ amountCents: 15400, categoryId: 'cat-saude', date: past(8), note: 'Farmácia' })
   await put({ amountCents: 98000, categoryId: 'cat-educacao', date: d(Math.min(28, todayDay + 9)), pending: true, note: 'Escola' })
-  await put({ kind: 'investimento', amountCents: 50000, categoryId: 'cat-inv-caixinha-1', date: d(Math.min(28, todayDay + 4)), pending: true, note: 'Reserva' })
+  await put({ kind: 'investimento', amountCents: 50000, categoryId: 'cat-inv-caixinha-1', date: d(Math.min(28, todayDay + 4)), pending: true, note: 'Reserva', goalId: 'goal:demo-reserva' })
+  await put({ amountCents: 107000, categoryId: 'cat-doacoes', item: 'Dízimos', date: past(6), note: 'Dízimo', goalId: 'goal:demo-dizimo' })
+  await put({ amountCents: 30000, categoryId: 'cat-doacoes', item: 'Ofertas', date: past(6), note: 'Oferta', goalId: 'goal:demo-oferta' })
   await put({ amountCents: 3990, categoryId: 'cat-lazer', date: past(2), accountId: undefined, cardId: card.id, invoiceMonth: invoiceMonthFor(past(2), card.closingDay), note: 'Streaming' })
   await put({ amountCents: 18500, categoryId: 'cat-lazer', date: past(10), profileId: 'u2', accountId: undefined, cardId: card.id, invoiceMonth: invoiceMonthFor(past(10), card.closingDay), note: 'Cinema e jantar' })
   for (const p of buildInstallments({ kind: 'despesa', amountCents: 240000, date: past(5), categoryId: 'cat-moradia', profileId: 'u1', cardId: card.id, note: 'Geladeira' }, card, 6, 'demo-geladeira')) {
@@ -88,6 +108,7 @@ export async function seedDemo(repo: Repo): Promise<void> {
   await rec('demo-sal-bruno', 5, { kind: 'receita', amountCents: 450000, categoryId: 'cat-salario-u2', profileId: 'u2', accountId: 'demo-pix', note: 'Salário' })
   await rec('demo-aluguel', 5, { kind: 'despesa', amountCents: 220000, categoryId: 'cat-moradia', profileId: 'u1', accountId: 'demo-itau', note: 'Aluguel' })
   await rec('demo-escola', 25, { kind: 'despesa', amountCents: 98000, categoryId: 'cat-educacao', profileId: 'u1', accountId: 'demo-itau', note: 'Escola' }, 12)
-  await rec('demo-reserva', 6, { kind: 'investimento', amountCents: 50000, categoryId: 'cat-inv-caixinha-1', profileId: 'u1', accountId: 'demo-itau', note: 'Reserva' })
+  await rec('demo-reserva', 6, { kind: 'investimento', amountCents: 50000, categoryId: 'cat-inv-caixinha-1', profileId: 'u1', accountId: 'demo-itau', note: 'Reserva', goalId: 'goal:demo-reserva' })
+  await rec('demo-dizimo', 6, { kind: 'despesa', amountCents: 107000, categoryId: 'cat-doacoes', item: 'Dízimos', profileId: 'u1', accountId: 'demo-itau', note: 'Dízimo', goalId: 'goal:demo-dizimo' })
   await repo.setDevice({ dataFileId: 'DEMO', folderId: 'DEMO', profileId: 'u1' })
 }
