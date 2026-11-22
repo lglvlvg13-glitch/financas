@@ -15,7 +15,7 @@ async function start() {
   let deps: AppDeps
   if (demo) {
     const { DemoDrive, seedDemo } = await import('./demo')
-    const repo = new Repo('financas-familia-demo-8')
+    const repo = new Repo('financas-familia-demo-9')
     await seedDemo(repo)
     const drive = new DemoDrive()
     deps = {

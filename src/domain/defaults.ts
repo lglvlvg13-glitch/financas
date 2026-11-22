@@ -36,7 +36,7 @@ export const DEFAULT_CATEGORIES: Def[] = [
   { id: 'cat-filhos', name: 'Filhos e dependentes', kind: 'despesa', group: 'necessidade', items: [i('Fraldas e alimentação infantil', n), i('Babá ou creche', n), i('Brinquedos e livros', d), i('Atividades extracurriculares', d), i('Festas de aniversário', d)] },
   { id: 'cat-pets', name: 'Animais de estimação', kind: 'despesa', group: 'necessidade', items: [i('Ração', n), i('Veterinário e vacinas', n), i('Higiene e acessórios', n), i('Seguro pet', d), i('Adestramento', d), i('Dog walker / passeios', d)] },
   { id: 'cat-familia', name: 'Família e social', kind: 'despesa', group: 'desejo', items: [i('Eventos familiares', d), i('Presentes comemorativos', d), i('Presentes em geral', d)] },
-  { id: 'cat-doacoes', name: 'Doações e caridade', kind: 'despesa', group: 'necessidade', items: [i('Contribuições religiosas', n), i('Doações para instituições', n), i('Custos de voluntariado', n)] },
+  { id: 'cat-doacoes', name: 'Generosidade', kind: 'despesa', group: 'necessidade', items: [i('Dízimos', n), i('Ofertas', n), i('Doações para instituições', n), i('Contribuições religiosas', n), i('Custos de voluntariado', n)] },
   { id: 'cat-emergencias', name: 'Emergenciais / imprevistos', kind: 'despesa', group: 'necessidade', items: [i('Despesas inesperadas', n)] },
   { id: PAYMENT_CATEGORY_ID, name: 'Pagamento de fatura', kind: 'despesa', system: true },
 
@@ -48,7 +48,8 @@ export const DEFAULT_CATEGORIES: Def[] = [
 
 /** Carimbo dos padrões desta versão. Maior que o da Fase 1 (0), para a migração vencer a junção com o Drive,
  *  e muito menor que qualquer edição real (Date.now()). Carimbo ≤ isto = padrão nunca editado. */
-export const DEFAULTS_VERSION = 1
+/** Sobe a cada mudança nos padrões (2: Doações e caridade virou Generosidade, com Dízimos, Ofertas e Doações). */
+export const DEFAULTS_VERSION = 2
 
 /** Nomes dos itens de cada categoria padrão (usado nas dicas). */
 export const EXAMPLES: Record<string, string[]> = Object.fromEntries(

@@ -68,6 +68,8 @@ export interface Transaction extends Meta {
   importKey?: string
   /** Comprovante (foto/PDF) guardado no Drive. */
   receipt?: { fileId: string; name: string; mime: string }
+  /** Meta do planejamento para a qual este lançamento conta (id "goal:…"). */
+  goalId?: string
 }
 
 export type TransactionDraft = Omit<Transaction, keyof Meta>

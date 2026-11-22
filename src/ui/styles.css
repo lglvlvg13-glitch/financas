@@ -353,7 +353,12 @@ p { margin: 0 0 12px; }
 @media (min-width: 700px) { .picked-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .picked-grid span { display: grid; font-size: 12px; color: var(--tinta-2); font-weight: 600; }
 .picked-grid b { font-size: 16px; }
-.method-card { text-align: left; font: inherit; color: inherit; width: 100%; border: 0; }
+.method-card, .goals-card { text-align: left; font: inherit; color: inherit; width: 100%; border: 0; }
+.goals-card { display: block; margin-top: 14px; cursor: pointer; }
+.goals-card h2 { margin: 0; }
+.goal-mini { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 12px; }
+.goal-mini li { display: grid; gap: 3px; }
+.goal-mini .bar { margin-top: 4px; }
 .rings { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
 .ring { display: grid; justify-items: center; gap: 2px; text-align: center; font-size: 13px; }
 .ring b { font-size: 13px; }
@@ -422,6 +427,40 @@ p { margin: 0 0 12px; }
 .row.with-ico .tx-title { grid-column: 2; }
 .amount-field input.entrada { color: var(--entrada); }
 .amount-field input.investe { color: var(--investe-cor); }
+
+/* ---------- Planejamento e metas ---------- */
+.plano h2 { font-size: 19px; }
+.plano .panel + .panel { margin-top: 14px; }
+.area-box { position: relative; overflow: hidden; padding-left: 22px; margin-top: 14px; }
+.area-box::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--area); }
+.area-box.generosidade { --area: #b07a3a; }
+.area-box.necessidades { --area: #4a5d23; }
+.area-box.desejos { --area: #8ca04a; }
+.area-box.poupancas { --area: #2f7d32; }
+.area-box.investimentos { --area: #4a6fa5; }
+.area-box h3 { margin: 0; font-size: 17px; }
+.area-box .small { font-size: 14px; margin: 8px 0 0; }
+.sub-box { margin-top: 12px; }
+.sub-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 12.5px; font-weight: 800; color: var(--tinta-2); text-transform: none; letter-spacing: .01em; padding-bottom: 6px; border-bottom: 1px solid var(--linha); }
+.sub-head .linklike { font-size: 13px; }
+.goal-list { list-style: none; margin: 0; padding: 0; }
+.goal { display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--linha); }
+.goal:last-child { border-bottom: 0; }
+.goal-main { flex: 1; min-width: 0; display: grid; gap: 3px; text-align: left; background: none; border: 0; padding: 12px 0; color: inherit; font: inherit; cursor: pointer; }
+.goal-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.goal-top strong { font-size: 15.5px; }
+.goal .bar { margin-top: 6px; }
+.goal.done .goal-top strong { color: var(--tinta-2); text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.badge.term-curto { color: var(--ok-fg); background: var(--ok-bg); }
+.badge.term-medio { color: var(--marca); background: var(--suave); }
+.badge.term-longo { color: var(--investe-cor); background: color-mix(in srgb, var(--investe-cor) 14%, transparent); }
+.check-btn { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--linha-forte); background: none; color: transparent; display: grid; place-items: center; cursor: pointer; }
+.check-btn.on { background: var(--entrada); border-color: var(--entrada); color: #fff; }
+.check-btn:focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; }
+.pct-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.pct-row label { font-size: 15px; color: var(--tinta); }
+.pct-input { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
+.pct-input input { width: 84px; text-align: right; }
 
 /* ---------- Login (sempre escuro) ---------- */
 .login {

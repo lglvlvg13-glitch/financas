@@ -37,7 +37,7 @@ function rangeLabel(kind: Kind, r: Range): string {
 }
 
 /** Gera os recorrentes dos meses do período, até o mês atual. */
-function useGenerateRange(range: Range) {
+export function useGenerateRange(range: Range) {
   const { repo, me } = useApp()
   useEffect(() => {
     const last = monthOf(today()) < monthOf(range.to) ? monthOf(today()) : monthOf(range.to)

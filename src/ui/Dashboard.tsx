@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useGoals } from './useGoals'
+import { areaById, goalProgress } from '../domain/goals'
 import { useList, useLive } from './context'
 import { openWithStatus } from './Transactions'
 import { openCardsAt } from './Cards'
@@ -47,6 +49,7 @@ export function Dashboard({ go }: { go: (p: Page) => void }) {
   const categories = useList<Category>('categories') ?? []
   const cards = useList<Card>('cards') ?? []
   const settings = useLive(r => r.get<Settings>('settings', 'app'))
+  const goals = useGoals()
   if (!txs) return null
 
   const data = { transactions: txs, categories, cards }
@@ -239,6 +242,34 @@ export function Dashboard({ go }: { go: (p: Page) => void }) {
           </div>
         </button>
       )}
+
+      {goals && (() => {
+        const open = goals.filter(g => !g.doneAt)
+          .map(g => ({ g, p: goalProgress(g, txs, now) }))
+          .filter(x => !x.p.reached)
+          .sort((a, b) => (a.g.deadline ?? '9999').localeCompare(b.g.deadline ?? '9999'))
+        const done = goals.length - open.length
+        return (
+          <button className="panel goals-card" onClick={() => go('planejamento')} aria-label="Metas. Abrir o Planejamento">
+            <div className="b-head">
+              <h2>Metas</h2>
+              <span className="muted" style={{ fontSize: 13 }}>{goals.length ? `${done} de ${goals.length} concluídas` : 'Planejamento'}</span>
+            </div>
+            {goals.length === 0
+              ? <p className="muted" style={{ margin: '8px 0 0' }}>Nenhuma meta ainda. Crie metas de curto, médio e longo prazo em Generosidade, Necessidades, Desejos, Poupanças e Investimentos.</p>
+              : open.length === 0 ? <p className="entrada" style={{ margin: '8px 0 0', fontWeight: 700 }}>Todas as metas concluídas.</p>
+              : <ul className="goal-mini">
+                  {open.slice(0, 3).map(({ g, p }) => (
+                    <li key={g.id}>
+                      <span className="goal-top"><strong>{g.name}</strong><span className="hint">{g.deadline ? `até ${g.deadline.slice(8, 10)}/${g.deadline.slice(5, 7)}/${g.deadline.slice(0, 4)}` : areaById(g.area).name}</span></span>
+                      {p.pct !== undefined && <span className="bar" aria-hidden="true"><span style={{ width: `${p.pct}%` }} /></span>}
+                      {p.pct !== undefined && <span className="hint num">{formatBRL(p.doneCents)} de {formatBRL(g.targetCents!)} ({p.pct}%)</span>}
+                    </li>
+                  ))}
+                </ul>}
+          </button>
+        )
+      })()}
 
       {top.length > 0 && (
         <section className="panel">

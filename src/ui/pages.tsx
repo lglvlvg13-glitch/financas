@@ -8,11 +8,13 @@ import { Dashboard } from './Dashboard'
 import { YearReport } from './YearReport'
 import { Import } from './Import'
 import { Icon, type IconName } from './Icons'
+import { Planning } from './Planning'
 
-export type Page = 'importar' | 'resumo' | 'lancamentos' | 'painel' | 'cartoes' | 'mais' | 'contas' | 'relatorio' | 'ajustes' | 'categorias' | 'recorrentes'
+export type Page = 'planejamento' | 'importar' | 'resumo' | 'lancamentos' | 'painel' | 'cartoes' | 'mais' | 'contas' | 'relatorio' | 'ajustes' | 'categorias' | 'recorrentes'
 
 function More({ go }: { go: (p: Page) => void }) {
   const items: Array<[Page, string, string, IconName]> = [
+    ['planejamento', 'Planejamento e metas', 'Divisão da renda e metas de curto, médio e longo prazo', 'alvo'],
     ['contas', 'Contas', 'Saldos das contas, poupança e Pix', 'conta'],
     ['relatorio', 'Relatório do ano', 'Cada categoria mês a mês, como na planilha', 'relatorio'],
     ['importar', 'Importar extrato', 'OFX ou CSV do banco e da fatura do cartão', 'importar'],
@@ -49,6 +51,7 @@ export function Pages({ page, go }: { page: Exclude<Page, 'ajustes'>; go: (p: Pa
     case 'categorias': return <Categories />
     case 'recorrentes': return <Recurrences />
     case 'resumo': return <Summary go={go} />
+    case 'planejamento': return <Planning />
     default: return <Dashboard go={go} />
   }
 }
