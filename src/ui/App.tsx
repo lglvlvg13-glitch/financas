@@ -6,7 +6,6 @@ import { Settings } from './Settings'
 import { SyncBanner } from './SyncBanner'
 import { UndoProvider } from './UndoToast'
 import { Pages, type Page } from './pages'
-import { LockScreen, useLockState } from './Lock'
 import { useDueNotifications } from './Reminders'
 import { TransactionForm } from './TransactionForm'
 import { Icon, type IconName } from './Icons'
@@ -30,8 +29,7 @@ function Shell() {
   const shortcut = new URLSearchParams(window.location.search).get('abrir')
   const [page, setPage] = useState<Page>(shortcut === 'importar' ? 'importar' : 'painel')
   const [adding, setAdding] = useState(shortcut === 'novo')
-  const [locked, unlock] = useLockState()
-  useDueNotifications(!!device?.profileId && !locked)
+  useDueNotifications(!!device?.profileId)
   useEffect(() => {
     const theme = device?.theme ?? 'auto'
     document.documentElement.dataset.theme = theme
@@ -42,7 +40,6 @@ function Shell() {
   if (!device) return null
   if (!device.dataFileId) return <Welcome />
   if (!device.profileId) return <WhoAreYou />
-  if (locked) return <LockScreen onUnlock={unlock} />
 
   const navPage: Page = UNDER_MAIS.includes(page) ? 'mais' : page === 'importar' ? 'lancamentos' : page
   const syncOk = !syncStatus || syncStatus === 'ok' || syncStatus === 'sincronizando'

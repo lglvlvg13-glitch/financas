@@ -1,52 +1,14 @@
-import { render, screen, within, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { screen } from '@testing-library/react'
 import { setup } from './helpers'
-import App from '../../src/ui/App'
 
-test('criar PIN em Ajustes, app trava ao abrir, PIN errado não abre, certo abre', async () => {
+test('sem PIN: Ajustes não oferece bloqueio e o app abre direto, mesmo com um PIN antigo salvo', async () => {
   const s = await setup({ ready: true })
+  // Aparelho que tinha criado PIN numa versão anterior.
+  await s.repo.setDevice({ lock: { salt: 'x', hash: 'y', iterations: 1 } } as never)
   await s.user.click(await screen.findByRole('button', { name: 'Mais' }))
   await s.user.click(await screen.findByRole('button', { name: 'Ajustes' }))
-  await s.user.click(await screen.findByRole('button', { name: 'Criar PIN' }))
-  const dlg = await screen.findByRole('dialog')
-  await s.user.type(within(dlg).getByLabelText('Novo PIN (4 a 8 números)'), '4821')
-  await s.user.type(within(dlg).getByLabelText('Repita o PIN'), '4821')
-  await s.user.click(within(dlg).getByRole('button', { name: 'Salvar PIN' }))
-  await waitFor(async () => expect((await s.repo.getDevice()).lock).toBeDefined())
-
-  // Abre o app de novo (outra vez no mesmo aparelho).
-  s.unmount()
-  const user = userEvent.setup()
-  render(<App deps={{ repo: s.repo, requestToken: async () => ({ accessToken: 'T', expiresAt: Date.now() + 3e6 }), makeDrive: () => s.drive }} />)
-  const pin = await screen.findByLabelText('PIN')
-  expect(screen.queryByRole('navigation')).toBeNull()
-  await user.type(pin, '1111')
-  await user.click(screen.getByRole('button', { name: 'Desbloquear' }))
-  expect(await screen.findByRole('alert')).toHaveTextContent('PIN errado')
-  await user.clear(pin)
-  await user.type(pin, '4821')
-  await user.click(screen.getByRole('button', { name: 'Desbloquear' }))
-  expect(await screen.findByRole('navigation')).toBeInTheDocument()
-})
-
-test('PINs diferentes não são aceitos', async () => {
-  const s = await setup({ ready: true })
-  await s.user.click(await screen.findByRole('button', { name: 'Mais' }))
-  await s.user.click(await screen.findByRole('button', { name: 'Ajustes' }))
-  await s.user.click(await screen.findByRole('button', { name: 'Criar PIN' }))
-  const dlg = await screen.findByRole('dialog')
-  await s.user.type(within(dlg).getByLabelText('Novo PIN (4 a 8 números)'), '4821')
-  await s.user.type(within(dlg).getByLabelText('Repita o PIN'), '4822')
-  await s.user.click(within(dlg).getByRole('button', { name: 'Salvar PIN' }))
-  expect(await within(dlg).findByText('Os dois PINs não são iguais.')).toBeInTheDocument()
-  expect((await s.repo.getDevice()).lock).toBeUndefined()
-})
-
-test('tema escuro escolhido em Ajustes', async () => {
-  const s = await setup({ ready: true })
-  await s.user.click(await screen.findByRole('button', { name: 'Mais' }))
-  await s.user.click(await screen.findByRole('button', { name: 'Ajustes' }))
-  await s.user.click(within(await screen.findByRole('group', { name: 'Tema' })).getByRole('button', { name: 'Escuro' }))
-  await waitFor(() => expect(document.documentElement.dataset.theme).toBe('escuro'))
-  expect((await s.repo.getDevice()).theme).toBe('escuro')
+  await screen.findByRole('heading', { name: 'Ajustes' })
+  expect(screen.queryByText('Bloqueio do app')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Criar PIN' })).toBeNull()
+  expect(screen.queryByLabelText('PIN')).toBeNull()
 })
