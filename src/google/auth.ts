@@ -43,7 +43,8 @@ export async function requestToken(clientId: string, opts: { prompt?: '' | 'cons
         if (r.error || !r.access_token) return reject(new Error(r.error ?? 'Login cancelado'))
         resolve({ accessToken: r.access_token, expiresAt: Date.now() + (r.expires_in ?? 3600) * 1000 })
       },
-      error_callback: e => reject(new Error(e.type === 'popup_closed' ? 'Login cancelado' : 'Falha no login')),
+      error_callback: e => reject(new Error(e.type === 'popup_closed' ? 'Login cancelado'
+        : e.type === 'popup_failed_to_open' ? 'O navegador bloqueou a janela do Google. Permita pop-ups deste site' : 'Falha no login')),
     })
     client.requestAccessToken({ prompt: opts.prompt ?? '' })
   })
