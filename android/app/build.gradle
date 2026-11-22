@@ -1,0 +1,27 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Versão de teste: abre o Provisão (o site) como aplicativo, pelo motor do Chrome
+// (Trusted Web Activity). O login com Google funciona como no navegador.
+android {
+    namespace 'io.github.lglvlvg13glitch.provisao'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'io.github.lglvlvg13glitch.provisao'
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName '0.1-teste'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
+}
