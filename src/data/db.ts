@@ -3,13 +3,13 @@ import { mergeDocs } from '../domain/merge'
 import { defaultCategories, defaultProfiles, DEFAULTS_VERSION } from '../domain/defaults'
 import { COLLECTIONS, emptyDoc, type AnyRecord, type Collection, type DataDoc, type Category, type Meta, type ProfileId, type Recurrence, type Transaction } from '../domain/types'
 
-import type { PinLock } from '../security/pin'
 
 /** Configuração deste aparelho (não sincroniza). */
 export interface DeviceConfig {
   profileId?: ProfileId; dataFileId?: string; folderId?: string
   /** Bloqueio por PIN/digital, só neste aparelho. null = sem bloqueio. */
-  lock?: PinLock | null
+  /** Campo antigo (bloqueio por PIN, removido): ignorado. */
+  lock?: unknown
   /** Tema da tela. */
   theme?: 'auto' | 'claro' | 'escuro'
   /** Vencimentos já avisados neste aparelho ("dia|id"), para não repetir. */
